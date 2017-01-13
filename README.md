@@ -9,7 +9,7 @@ Cancer survival models for TCM patients.
     corresponding shsets of cancer_other_info.xlsx.
     Get cancer_life_days.txt from cancer_life_days.xlsx.
     Get cancer_syndrome_syndromes.txt from the syndromes sheet of cancer_syndrome.xlsx.
-    Get incase_check.txt from incase_check.xlsx. Merge lines 2228/2229 and 3184/3185, 3328/3329
+    Get incase_check.txt from incase_check.xlsx. Merge lines 2228/2229 and 3184/3185, 3328/3329.
     Get cancer_drug_2017_sheet2.txt from the .xlsx of the same name.
 
 2.  Perform clustering on the patient record matrix. Also writes out the feature

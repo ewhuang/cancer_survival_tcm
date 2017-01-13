@@ -3,6 +3,7 @@
 
 ### Author: Edward Huang
 
+import numpy as np
 import time
 
 # This script creates the feature matrices to get ready for clustering.
@@ -51,11 +52,11 @@ def read_spreadsheet(fname):
         elif 'drug_2017' in fname:
             assert len(line) == 10
             inhospital_id, feature, feature_freq = line[0], line[1], line[4]
+
         if inhospital_id not in feature_dct:
             feature_dct[inhospital_id] = []
         feature_dct[inhospital_id] += [(feature, float(feature_freq))]
         unique_feature_list.add(feature)
-
     f.close()
     return feature_dct, list(unique_feature_list)
 
@@ -67,22 +68,40 @@ def write_feature_list(feature_list):
     out.write('\n'.join(feature_list))
     out.close()
 
+def build_feature_matrix(feature_dct_list, master_feature_list):
+    '''
+    Takes the feature list and a dictionary, and build a feature matrix.
+    '''
+    feature_matrix = []
+    # Loop through the global patient list, which is the intersection of all
+    # feature matrix keys.
+    for inhospital_id in patient_list:
+        # Get the row for the patient.
+        row = [0 for i in master_feature_list]
+        # Get the values from each of the feature dictionaries.
+        for feature_dct in feature_dct_list:
+            tuple_list = feature_dct[inhospital_id]
+            for (feature, feature_freq) in tuple_list:
+                row[master_feature_list.index(feature)] += feature_freq
+        feature_matrix += [row]
+    return np.array(feature_matrix)
+
 def main():
     survival_dct, dummy_return = read_spreadsheet('./data/cancer_life_days.txt')
-    herb_dct, unique_herb_list = read_spreadsheet('./data/cancer_other_info_'
-        'herbmed.txt')
-    symptom_dct, unique_symptom_list = read_spreadsheet('./data/cancer_other_'
-        'info_mr_symp.txt')
-    syndrome_dct, unique_syndrome_list = read_spreadsheet('./data/cancer_'
-        'syndrome_syndromes.txt')
-    incase_dct, unique_incase_list = read_spreadsheet('./data/incase_check.txt')
-    drug_dct, unique_drug_list = read_spreadsheet('./data/cancer_drug_2017_'
-        'sheet2.txt')
-    # herb_dct has more patients than survival_dct. Only use survival_dct keys.
-    # print set(herb_dct.keys()).difference(survival_dct.keys())
+    global patient_list
+    patient_list = set(survival_dct.keys())
+    feature_dct_list, master_feature_list = [], []
+    for fname in ('cancer_other_info_herbmed', 'cancer_other_info_mr_symp',
+        'cancer_syndrome_syndromes', 'incase_check', 'cancer_drug_2017_sheet2'):
+        feature_dct, feature_list = read_spreadsheet('./data/%s.txt' % fname)
 
-    write_feature_list(unique_herb_list + unique_syndrome_list + 
-        unique_syndrome_list + unique_incase_list + unique_drug_list)
+        feature_dct_list += [feature_dct]
+        master_feature_list += feature_list
+        patient_list = patient_list.intersection(feature_dct.keys())
+
+    write_feature_list(master_feature_list)
+    feature_matrix = build_feature_matrix(feature_dct_list, master_feature_list)
+    np.savetxt('./data/feature_matrix.txt', feature_matrix)
 
 if __name__ == '__main__':
     start_time = time.time()
