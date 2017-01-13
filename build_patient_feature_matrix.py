@@ -4,6 +4,8 @@
 ### Author: Edward Huang
 
 import numpy as np
+from sklearn.cluster import KMeans
+import sys
 import time
 
 # This script creates the feature matrices to get ready for clustering.
@@ -86,9 +88,29 @@ def build_feature_matrix(feature_dct_list, master_feature_list):
         feature_matrix += [row]
     return np.array(feature_matrix)
 
+def cluster_and_write(feature_matrix, survival_dct):
+    '''
+    Perform clustering and write out the dataframe to file.
+    '''
+    classifier = KMeans(n_clusters=int(num_clusters)).fit(feature_matrix)
+    labels = classifier.labels_
+
+    out = open('./data/patient_dataframes/%s_%s_df.txt' % (cluster_method,
+        num_clusters), 'w')
+    out.write('death\ttime\tcluster\n')
+    for patient_idx, inhospital_id in enumerate(patient_list):
+        death, time = survival_dct[inhospital_id][0]
+        out.write('%d\t%g\t%d\n' % (death, time, labels[patient_idx]))
+    out.close()
+
 def main():
+    if len(sys.argv) != 3:
+        print 'Usage: python %s kmeans num_clusters' % sys.argv[0]
+        exit()
+    global patient_list, cluster_method, num_clusters
+    cluster_method, num_clusters = sys.argv[1:]
+
     survival_dct, dummy_return = read_spreadsheet('./data/cancer_life_days.txt')
-    global patient_list
     patient_list = set(survival_dct.keys())
     feature_dct_list, master_feature_list = [], []
     for fname in ('cancer_other_info_herbmed', 'cancer_other_info_mr_symp',
@@ -101,7 +123,17 @@ def main():
 
     write_feature_list(master_feature_list)
     feature_matrix = build_feature_matrix(feature_dct_list, master_feature_list)
+    
+    # Removing columns that are mostly zero.
+    print feature_matrix.shape
+    feature_matrix = feature_matrix[:, np.apply_along_axis(np.count_nonzero, 0,
+        feature_matrix) >= 5]
+    print feature_matrix.shape
+
     np.savetxt('./data/feature_matrix.txt', feature_matrix)
+
+    # Clustering
+    cluster_and_write(feature_matrix, survival_dct)
 
 if __name__ == '__main__':
     start_time = time.time()

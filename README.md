@@ -18,3 +18,9 @@ Cancer survival models for TCM patients.
     ```bash
     python build_patient_feature_matrix.py
     ```
+
+3.  Plot the survival models.
+
+    ```bash
+    Rscript survival_model.R
+    ```
