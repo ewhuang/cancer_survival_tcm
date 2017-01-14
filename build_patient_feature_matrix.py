@@ -92,14 +92,24 @@ def cluster_and_write(feature_matrix, survival_dct):
     '''
     Perform clustering and write out the dataframe to file.
     '''
-    classifier = KMeans(n_clusters=int(num_clusters)).fit(feature_matrix)
-    labels = classifier.labels_
+    classifier = KMeans(n_clusters=num_clusters, random_state=9305).fit(
+        feature_matrix)
+    labels = list(classifier.labels_)
 
-    out = open('./data/patient_dataframes/%s_%s_df.txt' % (cluster_method,
+    # Find the degenerate clusters.
+    bad_clusters, min_threshold = [], 0.2 * len(feature_matrix)
+    for i in range(num_clusters):
+        if labels.count(i) < min_threshold:
+            bad_clusters += [i]
+
+    out = open('./data/patient_dataframes/%s_%d_df.txt' % (cluster_method,
         num_clusters), 'w')
     out.write('death\ttime\tcluster\n')
     for patient_idx, inhospital_id in enumerate(patient_list):
         death, time = survival_dct[inhospital_id][0]
+        cluster = labels[patient_idx]
+        if cluster in bad_clusters:
+            continue
         out.write('%d\t%g\t%d\n' % (death, time, labels[patient_idx]))
     out.close()
 
@@ -108,7 +118,7 @@ def main():
         print 'Usage: python %s kmeans num_clusters' % sys.argv[0]
         exit()
     global patient_list, cluster_method, num_clusters
-    cluster_method, num_clusters = sys.argv[1:]
+    cluster_method, num_clusters = sys.argv[1], int(sys.argv[2])
 
     survival_dct, dummy_return = read_spreadsheet('./data/cancer_life_days.txt')
     patient_list = set(survival_dct.keys())
