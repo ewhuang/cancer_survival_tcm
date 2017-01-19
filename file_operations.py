@@ -9,6 +9,7 @@ import numpy as np
 
 # build_patient_feature_matrix.py
 # drug_herb_synergistic_survival.py
+# create_prosnet_input.py
 def read_spreadsheet(fname):
     '''
     Depending on the spreadsheet, return a dictionary mapping the inhospital_id
@@ -84,3 +85,27 @@ def read_feature_matrix():
         survival_dct[line[0]] = (int(line[1]), float(line[2]))
     f.close()
     return np.array(feature_matrix), master_feature_list, survival_dct
+
+# create_prosnet_input.py
+def get_dictionary_symptom_herb_list():
+    '''
+    Returns a list of (symptom, herb) tuples.
+    '''
+    symptom_herb_list = []
+
+    f = open('./data/herb_symptom_dictionary.txt', 'r')
+    for i, line in enumerate(f):
+        if i == 0:
+            continue
+        line = line.strip().split('\t')
+
+        line_length = len(line)
+        # Some symptoms don't have good English translations.
+        assert line_length == 2 or line_length == 5
+        if line_length == 2:
+            herb, symptom = line
+        elif line_length == 5:
+            herb, symptom, english_symptom, db_src, db_src_id = line
+        symptom_herb_list += [(symptom, herb)]
+    f.close()
+    return list(set(symptom_herb_list))

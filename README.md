@@ -2,7 +2,7 @@
 Cancer survival models for TCM patients.
 
 
-### Data preprocessing.
+## Data preprocessing.
 
 1.  Download cancer_liujie.zip and cancer_drug_2017.1.12.xlsx from e-mails.
     Get cancer_other_info_mr_symp.txt and cancer_other_info_herbmed from the
@@ -28,7 +28,7 @@ Cancer survival models for TCM patients.
 3.  Run with 'single' argument first, then find the herbs that appear in
     ./results/survival_plots_single_features, then add them to line 56. Then,
     run this script with the 'multiple' argument. Results appear in ./results/
-    survival_plots_multiple_features.
+    survival_plots_multiple_features. Incorporates survival_model.R.
 
     ```bash
     python cluster_patient_survival.py kmeans num_clusters single/multiple
@@ -36,7 +36,18 @@ Cancer survival models for TCM patients.
 
 4.  Survival model on two clusters: the first contains patients that take a drug
     A, but not an herb B. The second cluster contains patients tha take both.
+    Also incorporates survival_model.R.
 
     ```bash
     python drug_herb_synergistic_survival.py
+    ```
+
+## Prosnet Data Imputation.
+
+1.  Create the input for prosnet. From hit_herb_target relations_zhou.xlsx, 
+    copy the filtered herb-target relations spreadsheet into a new file,
+    ./data/herb_protein_relations.txt.
+
+    ```bash
+    python create_prosnet_input.py
     ```
