@@ -109,3 +109,22 @@ def get_dictionary_symptom_herb_list():
         symptom_herb_list += [(symptom, herb)]
     f.close()
     return list(set(symptom_herb_list))
+
+# create_prosnet_input.py
+def get_entrez_to_hgnc_dct():
+    '''
+    Gets mappings from HGNC ID's to Entrez ID's.
+    '''
+    entrez_to_hgnc_dct = {}
+    f = open('./data/hgnc_to_entrez.txt', 'r')
+    for i, line in enumerate(f):
+        if i == 0:
+            continue
+        line = line.strip().split('\t')
+        if len(line) != 2:
+            continue
+        hgnc_id, entrez_id = line
+        assert entrez_id not in entrez_to_hgnc_dct
+        entrez_to_hgnc_dct[entrez_id] = hgnc_id
+    f.close()    
+    return entrez_to_hgnc_dct

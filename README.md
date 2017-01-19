@@ -43,11 +43,16 @@ Cancer survival models for TCM patients.
     ```
 
 ## Prosnet Data Imputation.
+Download PPI edges by going to 
+
+Convert the HGNC IDs of hit_herb_target relations_zhou.xlsx by going to
+http://www.genenames.org/cgi-bin/download, and then checking only Approved Symbol and Entrez Gene ID, then clicking submit. Save results into ./data/hgnc_to_entrez.txt.
+To get the actual PPI network, download http://www.functionalnet.org/humannet/HumanNet.v1.benchmark.txt. Move to ./data/.
 
 1.  Create the input for prosnet. From hit_herb_target relations_zhou.xlsx, 
     copy the filtered herb-target relations spreadsheet into a new file,
     ./data/herb_protein_relations.txt.
 
     ```bash
-    python create_prosnet_input.py
+    python create_prosnet_input.py num_dim
     ```
