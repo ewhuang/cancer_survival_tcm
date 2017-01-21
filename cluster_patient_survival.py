@@ -53,7 +53,8 @@ def cluster_and_write(feature_matrix, survival_dct, master_feature_list):
     Perform clustering and write out the dataframe to file.
     '''
     if feature_type == 'multiple':
-        herb_list = ['咳痰', '白术', '阴影部位', '食欲不振']
+        # herb_list = ['咳痰', '白术', '阴影部位', '食欲不振']
+        herb_list = ['食欲不振', '阴影部位', '其它费用', '乳酸脱氢酶(血清)']
         herb_indices = map(master_feature_list.index, herb_list)
 
     for feature_idx, feature in enumerate(master_feature_list):
@@ -98,15 +99,20 @@ def cluster_and_write(feature_matrix, survival_dct, master_feature_list):
 
 def main():
     if len(sys.argv) != 4:
-        print ('Usage: python %s kmeans num_clusters single/multiple'
+        print ('Usage: python %s kmeans num_clusters single/multiple/num_dim'
             ) % sys.argv[0]
         exit()
     global cluster_method, num_clusters, feature_type
     cluster_method, num_clusters = sys.argv[1], int(sys.argv[2])
     feature_type = sys.argv[3]
-    assert feature_type in ['single', 'multiple']
+    assert feature_type in ['single', 'multiple'] or feature_type.isdigit()
 
-    feature_matrix, master_feature_list, survival_dct = read_feature_matrix()
+    # If feature_type is a digit, then we are running on Prosnet-enriched data.
+    if feature_type.isdigit():
+        f = './data/feature_matrices/feature_matrix_%s.txt' % feature_type
+    else:
+        f = './data/feature_matrices/feature_matrix.txt'
+    feature_matrix, master_feature_list, survival_dct = read_feature_matrix(f)
     # Cluster the patients.
     cluster_and_write(feature_matrix, survival_dct, master_feature_list)
     # Call the R script.

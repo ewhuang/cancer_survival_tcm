@@ -90,10 +90,11 @@ def write_files(node_out, edge_out, edge_list, node_type_a, node_type_b):
         for i, node in enumerate(edge):
             if node not in global_node_list:
                 global_node_list.add(node)
-                node_out.write('%s\t%s\n' % (node, node_type_tup[i]))
+                node_out.write('%s\t%s\n' % (node.replace(' ', '_'),
+                    node_type_tup[i]))
         # Edge weights are all = 1. Map the edge type to a letter.
-        edge_out.write('%s\t%s\t1\t%s\n' % (node_a, node_b,
-            string.ascii_lowercase[num_edge_types]))
+        edge_out.write('%s\t%s\t1\t%s\n' % (node_a.replace(' ', '_'),
+            node_b.replace(' ', '_'), string.ascii_lowercase[num_edge_types]))
     num_edge_types += 1
 
 def run_prosnet(num_dim):
@@ -101,11 +102,11 @@ def run_prosnet(num_dim):
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
     command = ('../simons_mouse/Sheng/prosnet/model/embed -node "./data/prosnet'
-        '/prosnet_node_list.txt" -link "./data/prosnet/prosnet_edge_list.txt" '
-        '-output "%s/prosnet_node_vectors_%s_dims.vec" -binary 0 -size %s '
-        '-negative 5 -samples 1 -iters 100 -threads 24 -model 2 -depth 10 '
-        '-restart 0.8 -edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 1' % (
-            results_folder, num_dim, num_dim, num_edge_types))
+        '_input/prosnet_node_list.txt" -link "./data/prosnet_input/prosnet_'
+        'edge_list.txt" -output "%s/prosnet_node_vectors_%s_dims.vec" -binary 0 '
+        '-size %s -negative 5 -samples 1 -iters 100 -threads 24 -model 2 '
+        '-depth 10 -restart 0.8 -edge_type_num %d -rwr_ppi 1 -rwr_seq 1 '
+        '-train_mode 1' % (results_folder, num_dim, num_dim, num_edge_types))
     subprocess.call(command, shell=True)
 
 def main():
@@ -118,13 +119,14 @@ def main():
     # Mapping letters to files. m: symptoms, n: syndromes.
     f_tuples = [('m', './data/cancer_other_info_mr_symp.txt'), ('h', './data/'
         'cancer_other_info_herbmed.txt'), ('n', './data/cancer_syndrome_'
-        'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt')]
+        'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt'), ('t',
+        './data/incase_check.txt')]
 
-    results_folder = './data/prosnet'
+    results_folder = './data/prosnet_input'
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
-    node_out = open('./data/prosnet/prosnet_node_list.txt', 'w')
-    edge_out = open('./data/prosnet/prosnet_edge_list.txt', 'w')
+    node_out = open('%s/prosnet_node_list.txt' % results_folder, 'w')
+    edge_out = open('%s/prosnet_edge_list.txt' % results_folder, 'w')
 
     # Start off by writing out the protein-herb list and PPI list.
     protein_herb_list = get_protein_herb_edge_list()
@@ -149,6 +151,7 @@ def main():
     edge_out.close()
     node_out.close()
 
+    # Run prosnet. Outputs the low-dimensional vectors into files.
     run_prosnet(num_dim)
 
 if __name__ == '__main__':

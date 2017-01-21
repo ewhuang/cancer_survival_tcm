@@ -18,23 +18,25 @@ Cancer survival models for TCM patients.
     python generate_directories.py
     ```
 
-2.  Build the patient feature matrix. Currently removes features that appear in
-    fewer than 10 patients (line 87/88).
+## Clustering patients for survival model
+1.  Build the patient feature matrix. Removes features that appear in fewer than
+    10 patients (line 39/40) if no command line argument.
 
     ```bash
-    python build_patient_feature_matrix.py
+    python build_patient_feature_matrix.py num_dim<optional>
     ```
 
-3.  Run with 'single' argument first, then find the herbs that appear in
+2.  Run with 'single' argument first, then find the herbs that appear in
     ./results/survival_plots_single_features, then add them to line 56. Then,
     run this script with the 'multiple' argument. Results appear in ./results/
     survival_plots_multiple_features. Incorporates survival_model.R.
 
     ```bash
-    python cluster_patient_survival.py kmeans num_clusters single/multiple
+    python cluster_patient_survival.py kmeans num_clusters single
+    python cluster_patient_survival.py kmeans num_clusters multiple
     ```
 
-4.  Survival model on two clusters: the first contains patients that take a drug
+3.  Survival model on two clusters: the first contains patients that take a drug
     A, but not an herb B. The second cluster contains patients tha take both.
     Also incorporates survival_model.R.
 
@@ -54,5 +56,5 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ./data/herb_protein_relations.txt.
 
     ```bash
-    python create_prosnet_input.py num_dim
+    python run_prosnet.py num_dim
     ```

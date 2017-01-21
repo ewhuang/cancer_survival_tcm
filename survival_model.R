@@ -43,7 +43,6 @@ change.files <- function(filename){
             cluster_names<-c(cluster_names, substr(name, which(strsplit(name,"")
                 [[1]]=="=")[1] + 1, nchar(name)))
         }
-        print(cluster_names)
 
         legend_labels<-paste0(exp$n, c(', ', ', ') , cluster_names)
 
@@ -51,8 +50,13 @@ change.files <- function(filename){
             nclst), title="Number of cluster patients")
 
         # Title of plot. TODO.
-        title(main=paste(substr(filename, last_underscore_idx+1, nchar(filename)
-            - 4), ', p=', pv_new, sep=""))
+        if (grepl('synergy', filename)) {
+            title(main=paste(substr(filename, last_underscore_idx+1, nchar(
+                filename) - 4), ', p=', pv_new, sep=""))
+        } else {
+            title(main=paste(substr(filename, underscore_indices[5]+1, nchar(
+                filename) - 4), ', p=', pv_new, sep=""))            
+        }
 
         # Save plot.
         dev.off()

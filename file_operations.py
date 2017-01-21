@@ -62,24 +62,25 @@ def read_spreadsheet(fname):
         if inhospital_id not in feature_dct:
             feature_dct[inhospital_id] = []
         # Deal with folder path / issues.
-        if type(feature) == str and '/' in feature:
+        if type(feature) == str:
             feature = feature.replace('/', '_')
+            feature = feature.replace(' ', '_')
         feature_dct[inhospital_id] += [(feature, float(feature_freq))]
         unique_feature_list.add(feature)
     f.close()
     return feature_dct, list(unique_feature_list)
 
 # cluster_patient_survival.py
-def read_feature_matrix():
+def read_feature_matrix(fname):
     '''
     Reads the feature matrix of the patient data.
     '''
     feature_matrix, master_feature_list, survival_dct = [], [], OrderedDict({})
-    f = open('./data/feature_matrix.txt', 'r')
+    f = open(fname, 'r')
     for i, line in enumerate(f):
         line = line.strip().split('\t')
         if i == 0:
-            master_feature_list = line[2:]
+            master_feature_list = line[3:]
             continue
         feature_matrix += [map(float, line[3:])]
         survival_dct[line[0]] = (int(line[1]), float(line[2]))
