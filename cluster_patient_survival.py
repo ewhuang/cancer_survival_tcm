@@ -6,7 +6,7 @@
 from file_operations import read_feature_matrix, read_spreadsheet
 import numpy as np
 import os
-# from sklearn.cluster import KMeans
+import shutil
 import subprocess
 import sys
 import time
@@ -15,94 +15,20 @@ import time
 # a set of features to cluster the patients, then calls the R script to plot
 # the survival models.
 
-# def feature_analysis(labels, feature_matrix, master_feature_list, bad_clusters):
-#     '''
-#     Given two clusters of patients, perform t-test on their feature values
-#     and sort by p-value. Write out to file. Only write for two clusters.
-#     '''
-#     # Maps features to p-values of t-tests for the two clusters.
-#     feature_t_test_dct = {}
-#     # Loop through the two possible clusters.
-#     cluster_index_lst = []
-#     for cluster in list(set(labels).difference(bad_clusters)):
-#         # First element are the patient indices in cluster 1, same for #2.
-#         cluster_index_lst += [np.nonzero(labels == cluster)]
-#     for feature_idx, feature_row in enumerate(feature_matrix.T):
-#         feature_list_a = feature_row[cluster_index_lst[0]]
-#         feature_list_b = feature_row[cluster_index_lst[1]]
-#         # Compute the unpaired t-test between the two samples of features.
-#         t_stat, p_value = ttest_ind(feature_list_a, feature_list_b)
-#         feature = master_feature_list[feature_idx]
-#         # Update the dictionary.
-#         if np.isnan(p_value):
-#             p_value = 1
-#         feature_t_test_dct[feature] = p_value
-
-#     feature_t_test_dct = sorted(feature_t_test_dct.items(),
-#         key=operator.itemgetter(1))
-
-#     out = open('./results/feature_analyses/%s_%d_features.txt' % (
-#         cluster_method, num_clusters), 'w')
-#     for (feature, p_value) in feature_t_test_dct:
-#         out.write('%s\t%g\n' % (feature, p_value))
-#     out.close()
-
-# def cluster_and_write(feature_matrix, survival_dct, master_feature_list):
-#     '''
-#     Perform clustering and write out the dataframe to file.
-#     '''
-#     if feature_type == 'multiple':
-#         # herb_list = ['咳痰', '白术', '阴影部位', '食欲不振']
-#         herb_list = ['食欲不振', '阴影部位', '其它费用', '乳酸脱氢酶(血清)']
-#         herb_indices = map(master_feature_list.index, herb_list)
-
-#     for feature_idx, feature in enumerate(master_feature_list):
-#         # This block puts together the known herbs and the current index.
-#         if feature_type == 'multiple':
-#             if feature_idx in herb_indices:
-#                 continue
-#             selected_indices = [feature_idx] + herb_indices
-#         elif feature_type == 'single':
-#             selected_indices = [feature_idx]
-
-#         new_feature_matrix = feature_matrix[:,selected_indices]
-#         if cluster_method == 'kmeans':
-#             classifier = KMeans(n_clusters=num_clusters, random_state=9305
-#                 ).fit(new_feature_matrix)
-#         labels = list(classifier.labels_)
-
-#         # Find the degenerate clusters.
-#         bad_clusters, min_threshold = [], 0.2 * len(feature_matrix)
-#         for i in range(num_clusters):
-#             if labels.count(i) < min_threshold:
-#                 bad_clusters += [i]
-
-#         if len(set(labels)) - len(bad_clusters) <= 1:
-#             continue
-
-#         out = open('./data/patient_dataframes_%s_features/%s_%d_%s.txt' % (
-#             feature_type, cluster_method, num_clusters, feature), 'w')
-#         out.write('death\ttime\tcluster\n')
-#         for patient_idx, inhospital_id in enumerate(survival_dct.keys()):
-#             death, time = survival_dct[inhospital_id]
-#             cluster = labels[patient_idx]
-#             if cluster in bad_clusters:
-#                 continue
-#             out.write('%d\t%g\t%d\n' % (death, time, labels[patient_idx]))
-#         out.close()
-
-#     # If we have two clusters, then perform t-test between the cluster features.
-#     # if num_clusters - len(bad_clusters) == 2:
-#     #     feature_analysis(labels, feature_matrix, master_feature_list,
-#     #         bad_clusters)
-
 def generate_directories():
     global df_folder
-    df_folder = './data/patient_dataframes_%s_features' % feature_type
-    plot_folder = './results/survival_plots_%s_features' % feature_type
+    df_folder = './data/patient_dataframes'
+    plot_folder = './results/survival_plots'
     if isProsnet:
         df_folder += '_%s' % num_dim
         plot_folder += '_%s' % num_dim
+    else:
+        df_folder += '_none'
+        plot_folder += '_none'
+    if os.path.exists(df_folder):
+        shutil.rmtree(df_folder)
+    if os.path.exists(plot_folder):
+        shutil.rmtree(plot_folder)
     if not os.path.exists(df_folder):
         os.makedirs(df_folder)
     if not os.path.exists(plot_folder):
@@ -115,12 +41,10 @@ def cluster_and_write():
     '''
     f = './data/feature_matrices/feature_matrix'
     if isProsnet:
-        # feature_type thus indicates the number of dimensions.
         f += '_%s' % num_dim
     f += '.txt'
 
     feature_matrix, master_feature_list, survival_mat = read_feature_matrix(f)
-    # TODO: Change minimum number of patients per cluster.
     min_patients = 0.2 * len(feature_matrix)
 
     # Get symptom/syndrome list.
@@ -145,6 +69,7 @@ def cluster_and_write():
                 if row[0] != 0:
                     labels += [-1]
                 # Patient had condition, but not treated with the treatment.
+                # TODO: Vary the definition of treated/not treated.
                 elif row[1] == 0:
                     labels += ['not_treated']
                 else:
@@ -165,63 +90,22 @@ def cluster_and_write():
                 out.write('%d\t%g\t%s\n' % (death, time, label))
             out.close()
 
-    # if feature_type == 'multiple':
-    #     # herb_list = ['咳痰', '白术', '阴影部位', '食欲不振']
-    #     # herb_list = ['食欲不振', '阴影部位', '其它费用', '乳酸脱氢酶(血清)']
-    #     herb_list = ['气虚']
-    #     herb_indices = map(master_feature_list.index, herb_list)
-
-    # for feature_idx, feature in enumerate(master_feature_list):
-    #     # This block puts together the known herbs and the current index.
-    #     if feature_type == 'multiple':
-    #         if feature_idx in herb_indices:
-    #             continue
-    #         selected_indices = [feature_idx] + herb_indices
-    #     elif feature_type == 'single':
-    #         selected_indices = [feature_idx]
-
-    #     # For single feature_type, should just be a column vector.
-    #     new_feature_matrix = feature_matrix[:,selected_indices]
-    #     # "Cluster" the patients into those those who do/don't take the herb(s).
-    #     labels = ['feature' if len(row[row!=0]) == len(row
-    #         ) else 'no_feature' for row in new_feature_matrix]
-
-    #     if labels.count('feature') > 0.8 * len(labels):
-    #         continue
-    #     if labels.count('feature') < 0.2 * len(labels):
-    #         continue
-
-    #     out = open('%s/%s.txt' % (df_folder, feature), 'w')
-    #     out.write('death\ttime\tcluster\n')
-    #     for patient_idx, patient_tup in enumerate(survival_mat):
-    #         inhospital_id, death, time = patient_tup
-    #         out.write('%d\t%g\t%s\n' % (death, time, labels[patient_idx]))
-    #     out.close()
-
 def main():
-    # if len(sys.argv) != 4:
-    #     print ('Usage: python %s kmeans num_clusters single/multiple/num_dim'
-    #         ) % sys.argv[0]
-    #     exit()
-    # global cluster_method, num_clusters, feature_type
-    # cluster_method, num_clusters = sys.argv[1], int(sys.argv[2])
-    if len(sys.argv) not in [2, 3]:
-        print 'Usage: python %s single/multiple num_dim<optional>' % sys.argv[0]
+    if len(sys.argv) not in [1, 2]:
+        print 'Usage: python %s num_dim<optional>' % sys.argv[0]
         exit()
-    global feature_type, isProsnet
-    feature_type, isProsnet = sys.argv[1], False
-    assert feature_type in ['single', 'multiple']
-    if len(sys.argv) == 3:
+    global isProsnet
+    isProsnet = False
+    if len(sys.argv) == 2:
         global num_dim
-        num_dim, isProsnet = sys.argv[2], True
-
+        num_dim, isProsnet = sys.argv[1], True
     generate_directories()
 
     # Cluster the patients.
     cluster_and_write()
     
     # Call the R script.
-    command = 'Rscript survival_model.R %s ' % feature_type
+    command = 'Rscript survival_model.R '
     if isProsnet:
         command += num_dim
     subprocess.call(command, shell=True)

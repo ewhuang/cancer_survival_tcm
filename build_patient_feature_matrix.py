@@ -26,8 +26,8 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
                 continue
             for (feature, feature_freq) in feature_dct[inhospital_id]:
                 # TODO: Decide whether or not to keep the numerical features.
-                # row[master_feature_list.index(feature)] += feature_freq
-                row[master_feature_list.index(feature)] = 1
+                row[master_feature_list.index(feature)] += feature_freq
+                # row[master_feature_list.index(feature)] = 1
         feature_matrix += [row]
 
     return np.array(feature_matrix)
@@ -42,7 +42,7 @@ def impute_missing_data(feature_matrix, master_feature_list):
         Reads the output low-dimensional vectors created by prosnet.
         '''
         vector_dct = {}
-        f = open('./data/prosnet_vectors/prosnet_node_vectors_%s_dims.vec' %
+        f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
             num_dim, 'r')
         for i, line in enumerate(f):
             if i == 0:

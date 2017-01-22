@@ -41,16 +41,13 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     python build_patient_feature_matrix.py num_dim<optional>
     ```
 
-2.  Run with 'single' argument first, then find the herbs that appear in
-    ./results/survival_plots_single_features, then add them to line 56. Then,
-    run this script with the 'multiple' argument. Results appear in ./results/
-    survival_plots_multiple_features. Incorporates survival_model.R.
+2.  Results appear in ./results/survival_plots. Incorporates survival_model.R.
+    Using the additional num_dim argument means we are using the prosnet
+    feature matrices.
 
     ```bash
-    python cluster_patient_survival.py single
-    python cluster_patient_survival.py multiple
-    python cluster_patient_survival.py single num_dim<optional>
-    python cluster_patient_survival.py multiple num_dim<optional>
+    python cluster_patient_survival.py
+    python cluster_patient_survival.py num_dim<optional>
     ```
 
 3.  Survival model on two clusters: the first contains patients that take a drug

@@ -12,22 +12,20 @@ change.files <- function(filename){
 
     nclst <- length(exp$n)
     pv <- (1 - pchisq(exp$chisq, nclst - 1))
-
     p_thresh<-0.01
     if (pv < p_thresh) {
         pv_new<-prettyNum(pv, digits=3, width=4, format="fg")
         fitMeta <- survfit(Surv(OV$time, OV$death) ~ (OV$cluster))
 
         # PNG filename. TODO.
-        underscore_indices<-which(strsplit(filename, "")[[1]]=="_")
-        second_idx<-underscore_indices[2]
+        second_underscore<-which(strsplit(filename, "")[[1]]=="_")[2]
 
         # if (grepl('synergy', filename)) {
         slash_indices<-which(strsplit(filename, "")[[1]]=="/")
         last_underscore_idx<-tail(slash_indices, n=1)
         # }
-        png(paste('./results/survival_plots', paste(substr(filename, second_idx,
-            nchar(filename) - 4), "png", sep="."), sep=''))
+        png(paste('./results/survival_plots', paste(substr(filename,
+            second_underscore, nchar(filename) - 4), "png", sep="."), sep=''))
 
         plot(fitMeta, col=rainbow(nclst), xlim=c(0, 48), xlab='Time (months)',
             ylab="Probablity of survival")
@@ -53,11 +51,11 @@ change.files <- function(filename){
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 1) {
-    files <- list.files(path=paste("./data/patient_dataframes_", args[1],
-        "_features", sep=''), full.names = TRUE)
+if (length(args) == 0) {
+    files <- list.files(path=paste("./data/patient_dataframes_none", sep=''),
+        full.names = TRUE)
 } else {
     files <- list.files(path=paste("./data/patient_dataframes_", args[1],
-        "_features_", args[2], sep=''), full.names = TRUE)    
+        sep=''), full.names = TRUE)
 }
 invisible(lapply(files, change.files))

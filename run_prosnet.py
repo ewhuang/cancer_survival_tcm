@@ -98,7 +98,7 @@ def write_files(node_out, edge_out, edge_list, node_type_a, node_type_b):
     num_edge_types += 1
 
 def run_prosnet():
-    results_folder = './data/prosnet_vectors'
+    results_folder = './data/prosnet_data'
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
     command = ('../simons_mouse/Sheng/prosnet/model/embed -node "%s/prosnet_'
@@ -123,7 +123,7 @@ def main():
         'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt'), ('t',
         './data/incase_check.txt')]
 
-    input_folder = './data/prosnet_input'
+    input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
         os.makedirs(input_folder)
     node_out = open('%s/prosnet_node_list.txt' % input_folder, 'w')
@@ -144,7 +144,7 @@ def main():
             edge_list = get_coocc_edge_list(fname_a, fname_b)
 
             # # symptom-herb edges should add the medical textbook's edges.
-            # TODO: Currently not adding in textbook edges.
+            # TODO.
             # if node_type_a == 'm' and node_type_b == 'h':
             #     edge_list += file_operations.get_dictionary_symptom_herb_list()
 
