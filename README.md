@@ -18,9 +18,24 @@ Cancer survival models for TCM patients.
     python generate_directories.py
     ```
 
+## Prosnet Data Imputation.
+Convert the HGNC IDs of hit_herb_target relations_zhou.xlsx by going to
+http://www.genenames.org/cgi-bin/download, and then checking only Approved Symbol and Entrez Gene ID, then clicking submit. Save results into ./data/hgnc_to_entrez.txt.
+To get the actual PPI network, download http://www.functionalnet.org/humannet/HumanNet.v1.benchmark.txt. Move to ./data/.
+
+1.  Create the input for prosnet. From hit_herb_target relations_zhou.xlsx, 
+    copy the filtered herb-target relations spreadsheet into a new file,
+    ./data/herb_protein_relations.txt.
+
+    ```bash
+    python run_prosnet.py num_dim
+    ```
+
 ## Clustering patients for survival model
 1.  Build the patient feature matrix. Removes features that appear in fewer than
-    10 patients (line 39/40) if no command line argument.
+    10 patients (line 39/40) if no command line argument. Adding the optional
+    num_dim argument, we build a feature matrix by using prosnet vector 
+    similarity scores.
 
     ```bash
     python build_patient_feature_matrix.py num_dim<optional>
@@ -32,8 +47,10 @@ Cancer survival models for TCM patients.
     survival_plots_multiple_features. Incorporates survival_model.R.
 
     ```bash
-    python cluster_patient_survival.py kmeans num_clusters single
-    python cluster_patient_survival.py kmeans num_clusters multiple
+    python cluster_patient_survival.py single
+    python cluster_patient_survival.py multiple
+    python cluster_patient_survival.py single num_dim<optional>
+    python cluster_patient_survival.py multiple num_dim<optional>
     ```
 
 3.  Survival model on two clusters: the first contains patients that take a drug
@@ -42,19 +59,4 @@ Cancer survival models for TCM patients.
 
     ```bash
     python drug_herb_synergistic_survival.py
-    ```
-
-## Prosnet Data Imputation.
-Download PPI edges by going to 
-
-Convert the HGNC IDs of hit_herb_target relations_zhou.xlsx by going to
-http://www.genenames.org/cgi-bin/download, and then checking only Approved Symbol and Entrez Gene ID, then clicking submit. Save results into ./data/hgnc_to_entrez.txt.
-To get the actual PPI network, download http://www.functionalnet.org/humannet/HumanNet.v1.benchmark.txt. Move to ./data/.
-
-1.  Create the input for prosnet. From hit_herb_target relations_zhou.xlsx, 
-    copy the filtered herb-target relations spreadsheet into a new file,
-    ./data/herb_protein_relations.txt.
-
-    ```bash
-    python run_prosnet.py num_dim
     ```

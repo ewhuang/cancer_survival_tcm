@@ -8,14 +8,14 @@ import numpy as np
 
 # build_patient_feature_matrix.py
 # drug_herb_synergistic_survival.py
-# create_prosnet_input.py
+# run_prosnet.py
 def read_spreadsheet(fname):
     '''
     Depending on the spreadsheet, return a dictionary mapping the inhospital_id
     to the feature list. All feature lists should be of the same length; some
     are binary (like the survival labels) and some are frequency vectors.
     Key: inhospital_id -> str
-    Value: varies from spreadsheet to spreadsheet.
+    Value: feature, feature frequency tuple -> (str, float)
     '''
     feature_dct, unique_feature_list = {}, set([])
     f = open(fname, 'r')
@@ -26,8 +26,9 @@ def read_spreadsheet(fname):
         line = line.strip().split('\t')
         if len(line) == 1:
             continue
-        # Survival events. Spit out binary labels, along with the event length.
+        # Survival events. Output binary labels, along with the event length.
         if 'life_days' in fname:
+            assert len(line) == 7
             inhospital_id, feature, feature_freq  = line[0], line[3], line[6]
             if '死亡' in feature:
                 feature = 1
@@ -78,15 +79,17 @@ def read_feature_matrix(fname):
     f = open(fname, 'r')
     for i, line in enumerate(f):
         line = line.strip().split('\t')
+        feature_list = line[3:]
         if i == 0:
-            master_feature_list = line[3:]
+            master_feature_list = feature_list[:]
             continue
         survival_matrix += [(line[0], int(line[1]), float(line[2]))]
-        feature_matrix += [map(float, line[3:])]
+        assert len(feature_list) == len(master_feature_list)
+        feature_matrix += [map(float, feature_list)]
     f.close()
     return np.array(feature_matrix), master_feature_list, survival_matrix
 
-# create_prosnet_input.py
+# run_prosnet.py
 def get_dictionary_symptom_herb_list():
     '''
     Returns a list of (symptom, herb) tuples.
@@ -110,7 +113,7 @@ def get_dictionary_symptom_herb_list():
     f.close()
     return list(set(symptom_herb_list))
 
-# create_prosnet_input.py
+# run_prosnet.py
 def get_entrez_to_hgnc_dct():
     '''
     Gets mappings from HGNC ID's to Entrez ID's.
