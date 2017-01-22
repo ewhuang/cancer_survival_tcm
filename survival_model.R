@@ -13,12 +13,7 @@ change.files <- function(filename){
     nclst <- length(exp$n)
     pv <- (1 - pchisq(exp$chisq, nclst - 1))
 
-    if (grepl('multiple', filename)) {
-        p_thresh<-0.001
-    } else {
-        p_thresh<-0.01
-    }
-
+    p_thresh<-0.01
     if (pv < p_thresh) {
         pv_new<-prettyNum(pv, digits=3, width=4, format="fg")
         fitMeta <- survfit(Surv(OV$time, OV$death) ~ (OV$cluster))
@@ -27,11 +22,10 @@ change.files <- function(filename){
         underscore_indices<-which(strsplit(filename, "")[[1]]=="_")
         second_idx<-underscore_indices[2]
 
-        if (grepl('synergy', filename)) {
-            slash_indices<-which(strsplit(filename, "")[[1]]=="/")
-            last_underscore_idx<-tail(slash_indices, n=1)
-        }
-
+        # if (grepl('synergy', filename)) {
+        slash_indices<-which(strsplit(filename, "")[[1]]=="/")
+        last_underscore_idx<-tail(slash_indices, n=1)
+        # }
         png(paste('./results/survival_plots', paste(substr(filename, second_idx,
             nchar(filename) - 4), "png", sep="."), sep=''))
 
@@ -49,14 +43,9 @@ change.files <- function(filename){
         legend(25, 1.0, legend_labels, lty=c(1,1), lwd=c(2.5,2.5), col=rainbow(
             nclst), title="Number of cluster patients")
 
-        # Title of plot. TODO.
-        if (grepl('synergy', filename)) {
-            title(main=paste(substr(filename, last_underscore_idx+1, nchar(
-                filename) - 4), ', p=', pv_new, sep=""))
-        } else {
-            title(main=paste(substr(filename, underscore_indices[5]+1, nchar(
-                filename) - 4), ', p=', pv_new, sep=""))            
-        }
+        # Title of plot.
+        title(main=paste(substr(filename, last_underscore_idx+1, nchar(
+            filename) - 4), ', p=', pv_new, sep=""))
 
         # Save plot.
         dev.off()
@@ -64,6 +53,11 @@ change.files <- function(filename){
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-files <- list.files(path=paste("./data/patient_dataframes_", args[1],
-    "_features", sep=''), full.names = TRUE)
+if (length(args) == 1) {
+    files <- list.files(path=paste("./data/patient_dataframes_", args[1],
+        "_features", sep=''), full.names = TRUE)
+} else {
+    files <- list.files(path=paste("./data/patient_dataframes_", args[1],
+        "_features_", args[2], sep=''), full.names = TRUE)    
+}
 invisible(lapply(files, change.files))

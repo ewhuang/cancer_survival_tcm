@@ -4,7 +4,6 @@
 ### These functions are shared in a variety of scripts. Most are typically
 ### functions that read files.
 
-from collections import OrderedDict
 import numpy as np
 
 # build_patient_feature_matrix.py
@@ -75,17 +74,17 @@ def read_feature_matrix(fname):
     '''
     Reads the feature matrix of the patient data.
     '''
-    feature_matrix, master_feature_list, survival_dct = [], [], OrderedDict({})
+    feature_matrix, master_feature_list, survival_matrix = [], [], []
     f = open(fname, 'r')
     for i, line in enumerate(f):
         line = line.strip().split('\t')
         if i == 0:
             master_feature_list = line[3:]
             continue
+        survival_matrix += [(line[0], int(line[1]), float(line[2]))]
         feature_matrix += [map(float, line[3:])]
-        survival_dct[line[0]] = (int(line[1]), float(line[2]))
     f.close()
-    return np.array(feature_matrix), master_feature_list, survival_dct
+    return np.array(feature_matrix), master_feature_list, survival_matrix
 
 # create_prosnet_input.py
 def get_dictionary_symptom_herb_list():
