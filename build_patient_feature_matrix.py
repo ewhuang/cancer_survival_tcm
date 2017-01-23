@@ -4,7 +4,7 @@
 
 from file_operations import read_spreadsheet
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from sklearn.metrics.pairwise import cosine_similarity
 import sys
 import time
 
@@ -26,8 +26,8 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
                 continue
             for (feature, feature_freq) in feature_dct[inhospital_id]:
                 # TODO: Decide whether or not to keep the numerical features.
-                row[master_feature_list.index(feature)] += feature_freq
-                # row[master_feature_list.index(feature)] = 1
+                # row[master_feature_list.index(feature)] += feature_freq
+                row[master_feature_list.index(feature)] = 1
         feature_matrix += [row]
 
     return np.array(feature_matrix)
@@ -59,9 +59,9 @@ def impute_missing_data(feature_matrix, master_feature_list):
         return np.array(vector_matrix)
 
     vector_matrix = read_prosnet_output(master_feature_list)
-    distance_matrix = squareform(pdist(vector_matrix, metric='cosine'))
+    similarity_matrix = cosine_similarity(vector_matrix)
     # Multiply the two feature matrix and the similarity matrix.
-    enriched_feature_matrix = np.dot(feature_matrix, distance_matrix)
+    enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
 
     for row_idx, row in enumerate(enriched_feature_matrix):
         # Set threshold of a matrix equal to one standard deviation above mean.

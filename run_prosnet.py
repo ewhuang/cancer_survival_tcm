@@ -104,9 +104,9 @@ def run_prosnet():
     command = ('../simons_mouse/Sheng/prosnet/model/embed -node "%s/prosnet_'
         'node_list.txt" -link "%s/prosnet_edge_list.txt" -output "%s/prosnet_'
         'node_vectors_%s_dims.vec" -binary 0 -size %s -negative 5 -samples 1 '
-        '-iters 100 -threads 24 -model 2 -depth 10 -restart 0.8 -edge_type_num '
-        '%d -rwr_ppi 1 -rwr_seq 1 -train_mode 1' % (input_folder, input_folder,
-        results_folder, num_dim, num_dim, num_edge_types))
+        '-iters 1000 -threads 24 -model 2 -depth 10 -restart 0.8 '
+        '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 1' % (input_folder,
+            input_folder, results_folder, num_dim, num_dim, num_edge_types))
     subprocess.call(command, shell=True)
 
 def main():
@@ -129,7 +129,8 @@ def main():
     node_out = open('%s/prosnet_node_list.txt' % input_folder, 'w')
     edge_out = open('%s/prosnet_edge_list.txt' % input_folder, 'w')
 
-    # Start off by writing out the protein-herb list and PPI list.
+    # # Start off by writing out the protein-herb list and PPI list.
+    # TODO: Decide whether or not to use prior information.
     protein_herb_list = get_protein_herb_edge_list()
     write_files(node_out, edge_out, protein_herb_list, 'p', 'h')
     ppi_edge_list = get_ppi_edge_list()
@@ -144,9 +145,9 @@ def main():
             edge_list = get_coocc_edge_list(fname_a, fname_b)
 
             # # symptom-herb edges should add the medical textbook's edges.
-            # TODO.
-            # if node_type_a == 'm' and node_type_b == 'h':
-            #     edge_list += file_operations.get_dictionary_symptom_herb_list()
+            # TODO. Better to leave this out.
+            if node_type_a == 'm' and node_type_b == 'h':
+                edge_list += file_operations.get_dictionary_symptom_herb_list()
 
             # Write the edges out to file.
             write_files(node_out, edge_out, edge_list, node_type_a, node_type_b)
