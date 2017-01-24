@@ -46,7 +46,6 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     feature matrices.
 
     ```bash
-    python cluster_patient_survival.py
     python cluster_patient_survival.py num_dim<optional>
     ```
 

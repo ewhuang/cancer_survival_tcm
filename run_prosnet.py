@@ -145,8 +145,9 @@ def main():
             edge_list = get_coocc_edge_list(fname_a, fname_b)
 
             # # symptom-herb edges should add the medical textbook's edges.
-            # TODO. Better to leave this out.
-            if node_type_a == 'm' and node_type_b == 'h':
+            # TODO. Adding in the herb-symptom dictionary.
+            # if node_type_a == 'm' and node_type_b == 'h':
+            if 'herb' in fname_a + fname_b and 'symp' in fname_a + fname_b:
                 edge_list += file_operations.get_dictionary_symptom_herb_list()
 
             # Write the edges out to file.

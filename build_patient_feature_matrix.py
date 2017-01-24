@@ -66,7 +66,8 @@ def impute_missing_data(feature_matrix, master_feature_list):
     for row_idx, row in enumerate(enriched_feature_matrix):
         # Set threshold of a matrix equal to one standard deviation above mean.
         # TODO: Tune this threshold.
-        threshold = np.mean(row) + np.std(row)
+        # threshold = np.mean(row) + np.std(row)
+        threshold = np.mean(row)
         row[row < threshold] = 0
         row[row > threshold] = 1
         enriched_feature_matrix[row_idx] = row

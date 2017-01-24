@@ -83,7 +83,7 @@ def cluster_patients():
 def main():
     cluster_patients()
 
-    subprocess.call('Rscript survival_model.R synergy', shell=True)
+    subprocess.call('Rscript survival_model.R synergy features', shell=True)
 
 if __name__ == '__main__':
     start_time = time.time()
