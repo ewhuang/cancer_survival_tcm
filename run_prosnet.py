@@ -122,6 +122,9 @@ def main():
         'cancer_other_info_herbmed.txt'), ('n', './data/cancer_syndrome_'
         'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt'), ('t',
         './data/incase_check.txt')]
+    # f_tuples = [('m', './data/cancer_other_info_mr_symp.txt'), ('h', './data/'
+    #     'cancer_other_info_herbmed.txt'), ('n', './data/cancer_syndrome_'
+        # 'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
@@ -146,7 +149,6 @@ def main():
 
             # # symptom-herb edges should add the medical textbook's edges.
             # TODO. Adding in the herb-symptom dictionary.
-            # if node_type_a == 'm' and node_type_b == 'h':
             if 'herb' in fname_a + fname_b and 'symp' in fname_a + fname_b:
                 edge_list += file_operations.get_dictionary_symptom_herb_list()
 

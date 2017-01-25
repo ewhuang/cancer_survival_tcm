@@ -10,7 +10,16 @@ change.files <- function(filename){
     exp <- survdiff(Surv(OV$time, OV$death) ~ factor(OV$cluster))
     nclst <- length(exp$n)
     pv <- (1 - pchisq(exp$chisq, nclst - 1))
-    p_thresh<-0.01
+    # Different p-value thresholds for the kmeans clustering, since for the
+    # occurrence clustering, we have a lot of pairs of elements to iterate
+    # through.
+    if (grepl('kmeans', filename)) {
+        p_thresh<-1.0
+    } else {
+        p_thresh<-0.01
+    }
+    print(filename)
+    print(pv)
     if (pv < p_thresh) {
         pv_new<-prettyNum(pv, digits=3, width=4, format="fg")
         fitMeta <- survfit(Surv(OV$time, OV$death) ~ (OV$cluster))
@@ -19,13 +28,13 @@ change.files <- function(filename){
         if (grepl('synergy', filename)) {
             untreat_med<-summary(fitMeta)$table["OV$cluster=drug_only", 'median']
             treat_med<-summary(fitMeta)$table["OV$cluster=both", "median"]
-        } else {
+        } else if (grepl('treatment', filename)) {
             untreat_med<-summary(fitMeta)$table["OV$cluster=not_treated", "median"]
             treat_med<-summary(fitMeta)$table["OV$cluster=treated", "median"]
         }
         # TODO: Only write out plots that have clusters where the treatment
         # cluster is better than the untreated cluster.
-        if (!is.na(untreat_med) && !is.na(treat_med) && treat_med > untreat_med){
+        if (grepl('kmeans', filename) || (!is.na(untreat_med) && !is.na(treat_med) && treat_med > untreat_med)) {
             # if (grepl('synergy', filename)) {
             slash_indices<-which(strsplit(filename, "")[[1]]=="/")
             last_underscore_idx<-tail(slash_indices, n=1)
