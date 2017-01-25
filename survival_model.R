@@ -7,9 +7,7 @@ defaultEncoding <- "UTF8"
 change.files <- function(filename){
     library_data <- filename
     OV <- read.table(file=library_data,header=TRUE,sep="\t",row.names=NULL)
-
     exp <- survdiff(Surv(OV$time, OV$death) ~ factor(OV$cluster))
-
     nclst <- length(exp$n)
     pv <- (1 - pchisq(exp$chisq, nclst - 1))
     p_thresh<-0.01
@@ -18,7 +16,6 @@ change.files <- function(filename){
         fitMeta <- survfit(Surv(OV$time, OV$death) ~ (OV$cluster))
         # PNG filename. TODO.
         second_underscore<-which(strsplit(filename, "")[[1]]=="_")[2]
-
         if (grepl('synergy', filename)) {
             untreat_med<-summary(fitMeta)$table["OV$cluster=drug_only", 'median']
             treat_med<-summary(fitMeta)$table["OV$cluster=both", "median"]
@@ -62,11 +59,5 @@ change.files <- function(filename){
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 1) {
-    files <- list.files(path=paste("./data/patient_dataframes_", args[1],
-        "_none", sep=''), full.names = TRUE)
-} else {
-    files <- list.files(path=paste("./data/patient_dataframes_", args[1], "_",
-        args[2], sep=''), full.names = TRUE)
-}
+files <- list.files(args[1], full.names = TRUE)
 invisible(lapply(files, change.files))

@@ -54,7 +54,6 @@ def write_clusters():
     if plot_type == 'treatment':
         for fname in ('cancer_other_info_mr_symp', 'cancer_syndrome_syndromes'):
             indep_list += read_spreadsheet('./data/%s.txt' % fname)[1]
-        indep_list = set(indep_list).intersection(master_feature_list)
     elif plot_type == 'synergy':
         indep_list = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
     # Treatment plot type, dependency list is the set of treatments. For
@@ -62,8 +61,7 @@ def write_clusters():
     dep_list = []
     if plot_type == 'treatment':
         for fname in ('cancer_other_info_herbmed', 'cancer_drug_2017_sheet2'):
-            dep_list += read_spreadsheet('./data/%s.txt' % fname) [1]
-        dep_list = set(dep_list).intersection(master_feature_list)
+            dep_list += read_spreadsheet('./data/%s.txt' % fname)[1]
     elif plot_type == 'synergy':
         dep_list = read_spreadsheet('./data/cancer_other_info_herbmed.txt')[1]
 
@@ -94,7 +92,7 @@ def write_clusters():
             num_indep = labels.count('treated') + labels.count('both')
             num_dep = labels.count('not_treated') + labels.count('drug_only')
             # TODO: Change the minimum number of clusters.
-            min_patients = max(0.2 * (num_indep + num_dep), 10)
+            min_patients = max(0.2 * (num_indep + num_dep), 20)
             if num_indep < min_patients or num_dep < min_patients:
                 continue
 
@@ -126,9 +124,7 @@ def main():
     # Cluster the patients.
     write_clusters()
     # Call the R script.
-    command = 'Rscript survival_model.R %s ' % plot_type
-    if isProsnet:
-        command += num_dim
+    command = 'Rscript survival_model.R %s' % df_folder
     subprocess.call(command, shell=True)
 
 if __name__ == '__main__':

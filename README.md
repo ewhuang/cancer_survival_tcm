@@ -32,10 +32,8 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ```
 
 ## Clustering patients for survival model
-1.  Build the patient feature matrix. Removes features that appear in fewer than
-    10 patients (line 39/40) if no command line argument. Adding the optional
-    num_dim argument, we build a feature matrix by using prosnet vector 
-    similarity scores.
+1.  Build the patient feature matrix. Adding the optional num_dim argument, we
+    build a feature matrix by using prosnet vector similarity scores.
 
     ```bash
     python build_patient_feature_matrix.py num_dim<optional>
@@ -43,16 +41,13 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
 
 2.  Results appear in ./results/survival_plots. Incorporates survival_model.R.
     Using the additional num_dim argument means we are using the prosnet
-    feature matrices.
+    feature matrices. 'treatment' argument means we're studying patients with
+    and without a treatment given a condition. 'synergy' argument means we're
+    studying drug effects in/outside of the presence of an herb.
+    'translateCharUTF8' must be called on a CHARSXP error might happen for
+    R error corruption issues. So far, only way is to increase the threshold
+    for the variable min_patients (currently 20).
 
     ```bash
-    python cluster_patient_survival.py num_dim<optional>
-    ```
-
-3.  Survival model on two clusters: the first contains patients that take a drug
-    A, but not an herb B. The second cluster contains patients tha take both.
-    Also incorporates survival_model.R.
-
-    ```bash
-    python drug_herb_synergistic_survival.py
+    python dependency_survival_analysis.py treatment/synergy num_dim<optional>
     ```
