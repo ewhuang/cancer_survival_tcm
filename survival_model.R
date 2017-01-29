@@ -1,8 +1,6 @@
 library(survival)
 
-#method_prefix <- "0.5_4_4_1_4_1"
 defaultEncoding <- "UTF8"
-#setwd("C:/Users/ewhuang3/Documents/tcm_project")
 
 change.files <- function(filename){
     library_data <- filename

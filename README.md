@@ -54,7 +54,10 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
 
     Best results when using binary features (line 30) and mean threshold (line 70) of build_patient_feature_matrix.py, as well as all prior information in run_prosnet.py
 
-3.  
+3.  Cluster patients using the command line argument clustering method. Clusters
+    for both types of feature matrices: with and without Prosnet. Also runs the
+    R script for plotting survival curves.
+    
     ```bash
-    python subcategorize_patients.py num_dim<optional>
+    python subcategorize_patients.py kmeans num_dim<optional>
     ```

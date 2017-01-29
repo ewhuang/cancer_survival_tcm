@@ -79,6 +79,13 @@ def write_files(node_out, edge_out, edge_list, node_type_a, node_type_b):
     global global_node_list, global_edge_list, num_edge_types
     # The order of node type a, b must match the edge order in edge_list.
     node_type_tup = (node_type_a, node_type_b)
+
+    # TODO: Set edge weight.
+    if 'p' in node_type_tup:
+        edge_weight = 1.0
+    else:
+        edge_weight = 0.5
+
     for edge in edge_list:
         node_a, node_b = [node.replace(' ', '_').replace('/', '_'
             ) for node in edge]
@@ -93,7 +100,7 @@ def write_files(node_out, edge_out, edge_list, node_type_a, node_type_b):
                 global_node_list.add(node)
                 node_out.write('%s\t%s\n' % (node, node_type_tup[i]))
         # Edge weights are all = 1. Map the edge type to a letter.
-        edge_out.write('%s\t%s\t1\t%s\n' % (node_a, node_b,
+        edge_out.write('%s\t%s\t%f\t%s\n' % (node_a, node_b, edge_weight,
             string.ascii_lowercase[num_edge_types]))
     num_edge_types += 1
 
@@ -122,9 +129,6 @@ def main():
         'cancer_other_info_herbmed.txt'), ('n', './data/cancer_syndrome_'
         'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt'), ('t',
         './data/incase_check.txt')]
-    # f_tuples = [('m', './data/cancer_other_info_mr_symp.txt'), ('h', './data/'
-    #     'cancer_other_info_herbmed.txt'), ('n', './data/cancer_syndrome_'
-        # 'syndromes.txt'), ('d', './data/cancer_drug_2017_sheet2.txt')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
@@ -142,7 +146,9 @@ def main():
     # Loop through every pair of node types.
     for i in range(len(f_tuples)):
         node_type_a, fname_a = f_tuples[i]
-        for j in range(i + 1, len(f_tuples)):
+        # TODO: currently adding in same-type edges (i.e., herb-herb edges)
+        # for j in range(i + 1, len(f_tuples)):
+        for j in range(i, len(f_tuples)):
             node_type_b, fname_b = f_tuples[j]
             # Get the co-occurrence edge list.
             edge_list = get_coocc_edge_list(fname_a, fname_b)
