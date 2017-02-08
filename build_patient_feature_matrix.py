@@ -63,7 +63,7 @@ def impute_missing_data(feature_matrix, master_feature_list):
     # TODO: Absolute value or not.
     similarity_matrix = np.abs(cosine_similarity(vector_matrix))
     # TODO: Thresholding similarity matrix.
-    similarity_matrix[similarity_matrix < 0.4] = 0
+    similarity_matrix[similarity_matrix < sim_thresh] = 0
     # Multiply the two feature matrix and the similarity matrix.
     enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
 
@@ -116,15 +116,17 @@ def write_feature_matrix(feature_matrix, master_feature_list, patient_list,
     out.close()
 
 def main():
-    if len(sys.argv) not in [1, 2]:
-        print 'Usage:python %s num_dim<optional>' % sys.argv[0]
+    if len(sys.argv) not in [1, 3]:
+        print 'Usage:python %s num_dim<optional> sim_thresh<optional>' % (
+            sys.argv[0])
         exit()
     global isImputation
     isImputation = False
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         # Prosnet has a command line argument.
-        global num_dim
-        num_dim, isImputation = sys.argv[1], True
+        global num_dim, sim_thresh
+        num_dim, sim_thresh, isImputation = sys.argv[1], float(sys.argv[2]
+            ), True
         assert num_dim.isdigit()
 
     survival_dct = read_spreadsheet('./data/cancer_life_days.txt')[0]
@@ -155,6 +157,6 @@ def main():
         survival_dct)
 
 if __name__ == '__main__':
-    start_time = time.time()
+    # start_time = time.time()
     main()
-    print("--- %s seconds ---" % (time.time() - start_time))
+    # print("--- %s seconds ---" % (time.time() - start_time))

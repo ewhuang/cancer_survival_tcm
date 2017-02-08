@@ -16,7 +16,6 @@ change.files <- function(filename){
     } else {
         p_thresh<-0.01
     }
-    print(filename)
     print(pv)
     if (pv < p_thresh) {
         pv_new<-prettyNum(pv, digits=3, width=4, format="fg")
