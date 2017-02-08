@@ -61,3 +61,13 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ```bash
     python subcategorize_patients.py kmeans num_dim<optional>
     ```
+
+## Post-experiment analysis
+
+1.  Tunes the similarity threshold from 0.0 to 0.5 (any similarity score < this
+    threshold is set to 0 in the similarity matrix). Plots the p-values of the
+    survival fit curves vs. this parameter.
+
+    ```bash
+    python plot_threshold_sensitivity.py
+    ```

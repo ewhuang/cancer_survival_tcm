@@ -16,12 +16,12 @@ point_list = []
 
 for sim_thresh in np.arange(0.01, 0.51, 0.01):
 # for sim_thresh in np.arange(0.01, 0.02, 0.01):
-    # command = 'python build_patient_feature_matrix.py 50 %g' % sim_thresh
-    # print command
-    # subprocess.call(command, shell=True)
-    # command = 'python subcategorize_patients.py kmeans 50 > %s/%g.txt' % (
-    #     out_folder, sim_thresh)
-    # subprocess.call(command, shell=True)
+    command = 'python build_patient_feature_matrix.py 50 %g' % sim_thresh
+    print command
+    subprocess.call(command, shell=True)
+    command = 'python subcategorize_patients.py kmeans 50 > %s/%g.txt' % (
+        out_folder, sim_thresh)
+    subprocess.call(command, shell=True)
 
     f = open('%s/%g.txt' % (out_folder, sim_thresh))
     for line in f:
@@ -29,7 +29,6 @@ for sim_thresh in np.arange(0.01, 0.51, 0.01):
         point_list += [(sim_thresh, p_val)]
         break
     f.close()
-
 
 plt.title('Survival plot p-value vs. cosine similarity lower bound')
 plt.xlabel('Cosine Similarity Lower Bound')

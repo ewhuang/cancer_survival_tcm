@@ -49,7 +49,21 @@ def feature_analysis(labels, feature_matrix, master_feature_list, bad_clusters,
         # Update the dictionary.
         if np.isnan(p_value):
             p_value = 1
-        feature_t_test_dct[feature] = p_value / 2.0
+        # TODO: Add in whether the features are greater.
+        a_mean, b_mean = np.mean(feature_list_a), np.mean(feature_list_b)
+        a_size, b_size = len(feature_list_a), len(feature_list_b)
+        if a_mean == b_mean:
+            tag == 'same'
+        elif a_size > b_size:
+            if a_mean > b_mean:
+                tag = 'larger'
+            elif a_mean < b_mean:
+                tag = 'smaller'
+        elif a_mean > b_mean:
+            tag = 'smaller'
+        else:
+            tag = 'larger'
+        feature_t_test_dct[(feature, tag)] = p_value / 2.0
 
     feature_t_test_dct = sorted(feature_t_test_dct.items(),
         key=operator.itemgetter(1))
@@ -60,8 +74,8 @@ def feature_analysis(labels, feature_matrix, master_feature_list, bad_clusters,
     else:
         out_name = '%s/prosnet_%s.txt' % (feat_folder, num_dim)
     out = open(out_name, 'w')
-    for (feature, p_value) in feature_t_test_dct:
-        out.write('%s\t%g\n' % (feature, p_value))
+    for ((feature, tag), p_value) in feature_t_test_dct:
+        out.write('%s\t%g\t%s\n' % (feature, p_value, tag))
     out.close()
 
 def regression_analysis(survival_mat, feature_matrix, master_feature_list,
@@ -120,7 +134,7 @@ def write_clusters(suffix):
             # Don't write clusters with fewer than 10 patients.
             if labels.count(label) < 10:
                 continue
-            # Smaller group is 0.
+            # TODO: Smaller group is 0.
             if labels.count(label) < 50:
                 group_tag = '0'
             else:
