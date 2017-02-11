@@ -59,7 +59,7 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     R script for plotting survival curves.
     
     ```bash
-    python subcategorize_patients.py kmeans num_dim<optional>
+    python subcategorize_patients.py seq/full num_dim<optional>
     ```
 
 ## Post-experiment analysis
@@ -70,4 +70,11 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
 
     ```bash
     python plot_threshold_sensitivity.py
+    ```
+
+2.  Plots the the top 10 features of with/without prosnet as computed by the t-
+    test, vs. the survival times of the patients.
+
+    ```bash
+    python feature_vs_survival_plot.py
     ```

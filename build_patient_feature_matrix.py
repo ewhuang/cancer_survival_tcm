@@ -26,9 +26,7 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
             if inhospital_id not in feature_dct:
                 continue
             for (feature, feature_freq) in feature_dct[inhospital_id]:
-                # TODO: Decide whether or not to keep the numerical features.
                 row[master_feature_list.index(feature)] += feature_freq
-                # row[master_feature_list.index(feature)] = 1
         feature_matrix += [row]
 
     return np.array(feature_matrix)
@@ -60,7 +58,6 @@ def impute_missing_data(feature_matrix, master_feature_list):
         return np.array(vector_matrix)
 
     vector_matrix = read_prosnet_output(master_feature_list)
-    # TODO: Absolute value or not.
     similarity_matrix = np.abs(cosine_similarity(vector_matrix))
     # TODO: Thresholding similarity matrix.
     similarity_matrix[similarity_matrix < sim_thresh] = 0
@@ -68,31 +65,6 @@ def impute_missing_data(feature_matrix, master_feature_list):
     enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
 
     return enriched_feature_matrix
-
-    # for row_idx, row in enumerate(enriched_feature_matrix):
-    #     # Set threshold of a matrix equal to one standard deviation above mean.
-    #     # TODO: Tune this threshold.
-    #     threshold = np.mean(row) + np.std(row)
-    #     # threshold = np.mean(row)
-    #     row[row < threshold] = 0
-    #     row[row > threshold] = 1
-    #     enriched_feature_matrix[row_idx] = row
-    # TODO: change up the softmax function.
-    # print feature_matrix.shape
-    # def softmax(x):
-    #     """Compute softmax values for each sets of scores in x."""
-    #     return np.exp(x) / np.sum(np.exp(x), axis=0)
-    # good_feature_idx_list = []
-    # # TODO: removing low standard deviation features (or low entropy).
-    # for col_idx, col in enumerate(enriched_feature_matrix.T):
-    #     if entropy(softmax(col)) > 0.1:
-    #         good_feature_idx_list += [col_idx]
-    # enriched_feature_matrix = enriched_feature_matrix[:,good_feature_idx_list]
-    # feature_matrix = feature_matrix[:,good_feature_idx_list]
-    # master_feature_list = [master_feature_list[idx] for idx in good_feature_idx_list]
-    # enriched_feature_matrix = np.add(feature_matrix, enriched_feature_matrix)
-    # print enriched_feature_matrix.shape
-    # return enriched_feature_matrix, master_feature_list
 
 def write_feature_matrix(feature_matrix, master_feature_list, patient_list,
     survival_dct):
@@ -139,7 +111,11 @@ def main():
         feature_dct, feature_list = read_spreadsheet('./data/%s.txt' % fname)
         # Update the list of feature dictionaries.
         feature_dct_list += [feature_dct]
-        master_feature_list += feature_list
+        # Update the master feature list. Some symptoms occur in the tests, so
+        # we must take care of duplicates.
+        for feature in feature_list:
+            if feature not in master_feature_list:
+                master_feature_list += [feature]
 
     # Create the numpy array, and remove bad columns.
     feature_matrix = build_feature_matrix(feature_dct_list, master_feature_list,
@@ -149,8 +125,8 @@ def main():
         # TODO: without entropy, remove the master feature list return tuple.
         # feature_matrix, master_feature_list = impute_missing_data(
         #     feature_matrix, master_feature_list)
-        feature_matrix = np.add(feature_matrix, impute_missing_data(
-            feature_matrix, master_feature_list))
+        feature_matrix = impute_missing_data(feature_matrix,
+            master_feature_list)
 
     # Write out to file.
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,

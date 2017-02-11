@@ -71,7 +71,7 @@ def plot_features_vs_survival(combined_feature_list):
 def main():
     generate_folder()
 
-    feat_folder = './results/feature_p_values_kmeans'
+    feat_folder = './results/feature_p_values_full'
     prosnet_features = read_feature_file('%s/prosnet_50.txt' % feat_folder)
     base_features = read_feature_file('%s/without_prosnet.txt' % feat_folder)
 

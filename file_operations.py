@@ -58,6 +58,9 @@ def read_spreadsheet(fname):
         elif 'drug_2017' in fname:
             assert len(line) == 10
             inhospital_id, feature, feature_freq = line[0], line[1], line[4]
+        else:
+            print 'file_operations.py: No such file!'
+            exit()
 
         if inhospital_id not in feature_dct:
             feature_dct[inhospital_id] = []
@@ -70,12 +73,17 @@ def read_spreadsheet(fname):
     f.close()
     return feature_dct, list(unique_feature_list)
 
-# cluster_patient_survival.py
-def read_feature_matrix(fname):
+# subcategorize_patients.py
+# def read_feature_matrix(fname):
+def read_feature_matrix(suffix=''):
     '''
-    Reads the feature matrix of the patient data.
+    Reads the feature matrix of the patient data. Takes an optional argument in
+    the form of '_50'.
     '''
     feature_matrix, master_feature_list, survival_matrix = [], [], []
+    # Process the filename.
+    fname = './data/feature_matrices/feature_matrix%s.txt' % suffix
+
     f = open(fname, 'r')
     for i, line in enumerate(f):
         line = line.strip().split('\t')

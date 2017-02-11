@@ -81,10 +81,11 @@ def write_files(node_out, edge_out, edge_list, node_type_a, node_type_b):
     node_type_tup = (node_type_a, node_type_b)
 
     # TODO: Set edge weight.
-    if 'p' in node_type_tup:
-        edge_weight = 1.0
-    else:
-        edge_weight = 0.5
+    # if 'p' in node_type_tup:
+    #     edge_weight = 1.0
+    # else:
+    #     edge_weight = 0.25
+    edge_weight = 1.0
 
     for edge in edge_list:
         node_a, node_b = [node.replace(' ', '_').replace('/', '_'
@@ -114,6 +115,7 @@ def run_prosnet():
         '-iters 1000 -threads 24 -model 2 -depth 10 -restart 0.8 '
         '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 1' % (input_folder,
             input_folder, results_folder, num_dim, num_dim, num_edge_types))
+    print command
     subprocess.call(command, shell=True)
 
 def main():

@@ -8,14 +8,16 @@ change.files <- function(filename){
     exp <- survdiff(Surv(OV$time, OV$death) ~ factor(OV$cluster))
     nclst <- length(exp$n)
     pv <- (1 - pchisq(exp$chisq, nclst - 1))
-    # Different p-value thresholds for the kmeans clustering, since for the
+    # Different p-value thresholds for the full clustering, since for the
     # occurrence clustering, we have a lot of pairs of elements to iterate
     # through.
-    if (grepl('kmeans', filename)) {
+    if (grepl('full', filename) || grepl('seq', filename)) {
         p_thresh<-1.0
     } else {
         p_thresh<-0.01
     }
+    # TODO: Cannot print filename for plotting threshold sensitivity.
+    print(filename)
     print(pv)
     if (pv < p_thresh) {
         pv_new<-prettyNum(pv, digits=3, width=4, format="fg")
@@ -31,7 +33,7 @@ change.files <- function(filename){
         }
         # TODO: Only write out plots that have clusters where the treatment
         # cluster is better than the untreated cluster.
-        if (grepl('kmeans', filename) || (!is.na(untreat_med) && !is.na(treat_med) && treat_med > untreat_med)) {
+        if (grepl('full', filename) || grepl('seq', filename) || (!is.na(untreat_med) && !is.na(treat_med) && treat_med > untreat_med)) {
             # if (grepl('synergy', filename)) {
             slash_indices<-which(strsplit(filename, "")[[1]]=="/")
             last_underscore_idx<-tail(slash_indices, n=1)
