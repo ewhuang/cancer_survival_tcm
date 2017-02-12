@@ -7,7 +7,6 @@ import numpy as np
 from scipy.stats import entropy
 from sklearn.metrics.pairwise import cosine_similarity
 import sys
-import time
 
 # This script creates the feature matrices to get ready for experiments.
 
@@ -58,8 +57,9 @@ def impute_missing_data(feature_matrix, master_feature_list):
         return np.array(vector_matrix)
 
     vector_matrix = read_prosnet_output(master_feature_list)
-    similarity_matrix = np.abs(cosine_similarity(vector_matrix))
-    # TODO: Thresholding similarity matrix.
+    # similarity_matrix = np.abs(cosine_similarity(vector_matrix))
+    similarity_matrix = cosine_similarity(vector_matrix)
+
     similarity_matrix[similarity_matrix < sim_thresh] = 0
     # Multiply the two feature matrix and the similarity matrix.
     enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
@@ -97,9 +97,9 @@ def main():
     if len(sys.argv) == 3:
         # Prosnet has a command line argument.
         global num_dim, sim_thresh
-        num_dim, sim_thresh, isImputation = sys.argv[1], float(sys.argv[2]
-            ), True
+        num_dim, sim_thresh = sys.argv[1], float(sys.argv[2])
         assert num_dim.isdigit()
+        isImputation = True
 
     survival_dct = read_spreadsheet('./data/cancer_life_days.txt')[0]
     # Initialize our list of inhospital_id's.
@@ -122,9 +122,6 @@ def main():
         patient_list)
 
     if isImputation:
-        # TODO: without entropy, remove the master feature list return tuple.
-        # feature_matrix, master_feature_list = impute_missing_data(
-        #     feature_matrix, master_feature_list)
         feature_matrix = impute_missing_data(feature_matrix,
             master_feature_list)
 
@@ -133,6 +130,4 @@ def main():
         survival_dct)
 
 if __name__ == '__main__':
-    # start_time = time.time()
     main()
-    # print("--- %s seconds ---" % (time.time() - start_time))

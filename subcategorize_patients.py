@@ -46,13 +46,13 @@ def feature_analysis(labels, feature_matrix, feature_list, max_clus, out_name,
             p_value = 1
         # TODO: Add in whether the features are greater.
         a_mean, b_mean = np.mean(feature_list_a), np.mean(feature_list_b)
-        a_size, b_size = len(feature_list_a), len(feature_list_b)
+        # assert len(feature_list_a) > len(feature_list_b)
         if a_mean == b_mean:
-            tag = 'same'
-        elif a_size > b_size and a_mean > b_mean:
-            tag = 'larger'
+            tag = '='
+        elif a_mean > b_mean:
+            tag = '>'
         else:
-            tag = 'smaller'
+            tag = '<'
         feature_t_test_dct[(feature, tag)] = p_value / 2.0
 
     feature_t_test_dct = sorted(feature_t_test_dct.items(),
@@ -85,11 +85,9 @@ def get_cluster_labels(feature_matrix, num_clusters):
     Clusters using K-Means with the given number of clusters on the cityblock
     distance matrix of the given feature matrix.
     '''
-    # TODO: Currently clustering on a distance matrix.
     distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
     est = KMeans(n_clusters=num_clusters, n_init=100, random_state=930519)
     est.fit(distance_matrix)
-
     return list(est.labels_)
 
 def write_clusters(labels, num_clusters, survival_mat, out_name):
@@ -107,12 +105,12 @@ def write_clusters(labels, num_clusters, survival_mat, out_name):
     out.write('death\ttime\tcluster\n')
     for patient_idx, patient_tup in enumerate(survival_mat):
         label = labels[patient_idx]
-        # Merge the smaller clusters. Merged cluster has index 0.
+        # Merge the smaller clusters; all have index 0.
         group_tag = '0'
+        # Largest cluster has index 1.
         if label == max_clus:
             group_tag = '1'
-        # TODO: Currently keeping labels if not 3. In other words, if we do use
-        # 3 clusters, merge the bottom two.
+        # TODO: Currently not merging clusters unless we have 3 clusters.
         if num_clusters != 3:
             group_tag = label
         inhospital_id, death, time = patient_tup
@@ -134,6 +132,7 @@ def cluster_full_feature_matrix(isProsnet):
         feat_fname = '%s/without_prosnet.txt' % feat_folder
 
     feature_matrix, feature_list, survival_mat = read_feature_matrix(suffix)
+    # TODO: Currently clustering with 3 clusters, merging the smaller 2.
     num_clusters = 3
 
     labels = get_cluster_labels(feature_matrix, num_clusters)
@@ -172,7 +171,6 @@ def characterize_cluster_symptoms(clus_patients, symptom_feature_matrix):
                 symptom += '>'
             else:
                 symptom += '<'
-        # if np.count_nonzero(col) > 0.75 * num_patients:
             symptom_cands += [symptom]
     return ', '.join(symptom_cands) + '\n'
 
@@ -204,26 +202,27 @@ def sequential_cluster(isProsnet):
     base_feature_matrix = read_feature_matrix()[0]
     for i in range(num_clusters):
         # Only cluster again if there are least 20 patients.
-        if labels.count(i) >= 20:
-            clus_patients = [j for j in range(len(labels)) if labels[j] == i]
-            # Find the symptoms that best characterize the cluster.
-            symptom_line = characterize_cluster_symptoms(clus_patients,
-                symptom_feature_matrix)
-            sub_labels = get_cluster_labels(feature_matrix[clus_patients], 3)
-            sub_survival_mat = [survival_mat[j] for j in clus_patients]
-            # Handling different dataframe filenames.
-            if isProsnet:
-                sub_df_fname = '%s/prosnet_%d_%s.txt' % (df_folder, i, num_dim)
-                sub_feat_fname = '%s/prosnet_%d_%s.txt' % (feat_folder, i,
-                    num_dim)
-            else:
-                sub_df_fname = '%s/without_prosnet_%d.txt' % (df_folder, i)
-                sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
+        if labels.count(i) < 20:
+            continue
+        # These are the indices of the patients in the current cluster.
+        clus_patients = [j for j, label in enumerate(labels) if label == i]
+        # Find the symptoms that best characterize the cluster.
+        symptom_line = characterize_cluster_symptoms(clus_patients,
+            symptom_feature_matrix)
+        sub_labels = get_cluster_labels(feature_matrix[clus_patients], 3)
+        sub_survival_mat = [survival_mat[j] for j in clus_patients]
+        # Handling different dataframe filenames.
+        if isProsnet:
+            sub_df_fname = '%s/prosnet_%d_%s.txt' % (df_folder, i, num_dim)
+            sub_feat_fname = '%s/prosnet_%d_%s.txt' % (feat_folder, i, num_dim)
+        else:
+            sub_df_fname = '%s/without_prosnet_%d.txt' % (df_folder, i)
+            sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
 
-            max_sub_clus_id = write_clusters(sub_labels, 3, sub_survival_mat,
-                sub_df_fname)
-            feature_analysis(sub_labels, base_feature_matrix, feature_list,
-                max_sub_clus_id, sub_feat_fname, symptom_line)
+        max_sub_clus_id = write_clusters(sub_labels, 3, sub_survival_mat,
+            sub_df_fname)
+        feature_analysis(sub_labels, base_feature_matrix, feature_list,
+            max_sub_clus_id, sub_feat_fname, symptom_line)
 
 def main():
     if len(sys.argv) != 3:

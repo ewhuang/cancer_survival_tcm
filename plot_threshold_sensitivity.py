@@ -25,10 +25,12 @@ for sim_thresh in np.arange(0.01, 0.51, 0.01):
     subprocess.call(command, shell=True)
 
     f = open('%s/%g.txt' % (out_folder, sim_thresh))
+    f.readline() # Skip the filename.
     p_val = float(f.readline().split()[1])
     point_list += [(sim_thresh, p_val)]
     # Read the second line if it's the first time doing so.
     if no_prosnet == 0:
+        f.readline() # Skip the filename.
         no_prosnet = float(f.readline().split()[1])
     f.close()
 
