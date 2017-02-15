@@ -17,7 +17,7 @@ def read_spreadsheet(fname):
     Key: inhospital_id -> str
     Value: feature, feature frequency tuple -> (str, float)
     '''
-    feature_dct, unique_feature_list = {}, set([])
+    feature_dct, unique_feature_list = {}, []
     f = open(fname, 'r')
     for i, line in enumerate(f):
         # Skip all header lines.
@@ -30,12 +30,11 @@ def read_spreadsheet(fname):
         if 'life_days' in fname:
             assert len(line) == 7
             inhospital_id, feature, feature_freq  = line[0], line[3], line[6]
-            if '死亡' in feature:
+            if '死亡' in feature: # 1 is death. 0 is unknown.
                 feature = 1
             else:
                 feature = 0
-            # Convert to months.
-            feature_freq = float(feature_freq) / 30.0
+            feature_freq = float(feature_freq) / 30.0 # Convert to months.
         # Different feature and frequency cases for different spreadsheets.
         elif 'herbmed' in fname:
             assert len(line) == 4
@@ -69,9 +68,10 @@ def read_spreadsheet(fname):
             feature = feature.replace('/', '_')
             feature = feature.replace(' ', '_')
         feature_dct[inhospital_id] += [(feature, float(feature_freq))]
-        unique_feature_list.add(feature)
+        if feature not in unique_feature_list:
+            unique_feature_list += [feature]
     f.close()
-    return feature_dct, list(unique_feature_list)
+    return feature_dct, unique_feature_list
 
 # subcategorize_patients.py
 # def read_feature_matrix(fname):
@@ -91,6 +91,7 @@ def read_feature_matrix(suffix=''):
         if i == 0:
             master_feature_list = feature_list[:]
             continue
+        # Survival matrix consists of (patient, death, time) tuples.
         survival_matrix += [(line[0], int(line[1]), float(line[2]))]
         assert len(feature_list) == len(master_feature_list)
         feature_matrix += [map(float, feature_list)]
@@ -98,11 +99,11 @@ def read_feature_matrix(suffix=''):
     return np.array(feature_matrix), master_feature_list, survival_matrix
 
 # run_prosnet.py
-def get_dictionary_symptom_herb_list():
+def get_dictionary_symptom_herb_set():
     '''
     Returns a list of (symptom, herb) tuples.
     '''
-    symptom_herb_list = []
+    symptom_herb_set = set([])
 
     f = open('./data/herb_symptom_dictionary.txt', 'r')
     for i, line in enumerate(f):
@@ -117,9 +118,17 @@ def get_dictionary_symptom_herb_list():
             herb, symptom = line
         elif line_length == 5:
             herb, symptom, english_symptom, db_src, db_src_id = line
-        symptom_herb_list += [(symptom, herb)]
+        # Special herb cases.
+        if '(' in herb:
+            herb = herb[:herb.index('(')]
+        elif '银翘片' in herb:
+            herb = '银翘片'
+        # Reformatting potential bad strings.
+        symptom = symptom.replace('/', '_').replace(' ', '_')
+        herb = herb.replace('/', '_').replace(' ', '_')
+        symptom_herb_set.add((symptom, herb))
     f.close()
-    return list(set(symptom_herb_list))
+    return symptom_herb_set
 
 # run_prosnet.py
 def get_entrez_to_hgnc_dct():
