@@ -4,6 +4,7 @@
 ### These functions are shared in a variety of scripts. Most are typically
 ### functions that read files.
 
+from collections import OrderedDict
 import numpy as np
 
 # build_patient_feature_matrix.py
@@ -17,7 +18,7 @@ def read_spreadsheet(fname):
     Key: inhospital_id -> str
     Value: feature, feature frequency tuple -> (str, float)
     '''
-    feature_dct, unique_feature_list = {}, []
+    feature_dct, unique_feature_list = OrderedDict({}), []
     f = open(fname, 'r')
     for i, line in enumerate(f):
         # Skip all header lines.

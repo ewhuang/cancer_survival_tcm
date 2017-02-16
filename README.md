@@ -62,6 +62,13 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     python subcategorize_patients.py seq/full num_dim<optional>
     ```
 
+    In the resulting feature analysis files in ./results/feature_p_values,
+    the first line in sequential clustering indicates the symptoms/tests that
+    were significantly different from other sub-clusters. <> signs indicate
+    whether they were less than or greater than in value, respectively. The
+    list shows the features that are significantly different between the two
+    clusters within the sub-cluster.
+
 ## Post-experiment analysis
 
 1.  Tunes the similarity threshold from 0.0 to 0.5 (any similarity score < this

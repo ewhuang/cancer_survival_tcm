@@ -17,7 +17,7 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
     feature_matrix = []
 
     for inhospital_id in patient_list:
-        # Get the row for the patient.
+        # Initialize the row for the patient.
         row = [0 for i in master_feature_list]
         # Get the values from each of the feature dictionaries.
         for feature_dct in feature_dct_list:
@@ -57,8 +57,9 @@ def impute_missing_data(feature_matrix, master_feature_list):
         return np.array(vector_matrix)
 
     vector_matrix = read_prosnet_output(master_feature_list)
-    # similarity_matrix = np.abs(cosine_similarity(vector_matrix))
-    similarity_matrix = cosine_similarity(vector_matrix)
+    # TODO: absolute value.
+    similarity_matrix = np.abs(cosine_similarity(vector_matrix))
+    # similarity_matrix = cosine_similarity(vector_matrix)
 
     similarity_matrix[similarity_matrix < sim_thresh] = 0
     # Multiply the two feature matrix and the similarity matrix.
