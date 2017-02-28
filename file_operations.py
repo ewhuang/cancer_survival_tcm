@@ -66,31 +66,21 @@ def read_spreadsheet(fname):
         elif 'incase_check' in fname:
             assert len(line) == 9
             inhospital_id, feature, feature_freq = line[0], line[3], line[4]
-            if feature_freq == '无':
-                feature_freq = 0
+            # Skip negative tests.
+            if feature_freq in ['无', '0级', '否', '没有']:
+                inhospital_id = 'bad_id'
+                continue
             try:
                 feature_freq = float(feature_freq)
+                # Skip 0 features.
+                if feature_freq == 0.0:
+                    inhospital_id = 'bad_id'
+                    continue
             except:
                 feature_freq = 1
         elif 'drug_2017' in fname:
             assert len(line) == 10
             inhospital_id, feature, feature_freq = line[0], line[1], line[4]
-        elif 'medical_history' in fname:
-            assert len(line) == 5
-            unique_feature_list = ['V肝炎病史', 'V高血压病史', 'V冠心病史', 'V有无慢性肺部疾病史']
-            inhospital_id, feat_freq_list = line[0], line[1:]
-            if '无' not in feat_freq_list and '有' not in feat_freq_list:
-                continue
-            if inhospital_id not in feature_dct:
-                feature_dct[inhospital_id] = []
-            for i, e in enumerate(feat_freq_list):
-                if '无' in e:
-                    feature_freq = 0
-                else:
-                    feature_freq = 1
-                feature_dct[inhospital_id] += [(unique_feature_list[i],
-                    feature_freq)]
-            continue
         else:
             print 'file_operations.py: No such file!'
             exit()
@@ -184,3 +174,58 @@ def get_entrez_to_hgnc_dct():
         entrez_to_hgnc_dct[entrez_id] = hgnc_id
     f.close()    
     return entrez_to_hgnc_dct
+
+# run_prosnet.py
+def read_smoking_history():
+    '''
+    Read the patient history, including the smoking history.
+    '''
+    first_time_id_list = read_case_info()
+    feature_dct = OrderedDict({})
+    binary_feature_list = (['V肝炎病史', 'V高血压病史', 'V冠心病史', 'V家族遗传性疾病',
+                'V输血史', 'V吸烟史', 'V药物过敏史', 'V有无慢性肺部疾病史', 'V中毒史',
+                'V肿瘤家族史'])
+    cancer_list = []
+    f = open('./data/smoking_history.txt', 'r')
+    for i, line in enumerate(f):
+        line = line.rstrip('\n\r').split('\t')
+        assert len(line) == 47
+        if i == 0:
+            # Map the important features to their indices in the dataframe.
+            header_line, feature_index_dct = line[:], {}
+            for feature in binary_feature_list:
+                feature_index_dct[feature] = header_line.index(feature)
+            continue
+        inhospital_id = line[0]
+        if inhospital_id not in first_time_id_list:
+            continue
+
+        # Don't use second or later visits.
+        assert inhospital_id not in feature_dct
+        feature_dct[inhospital_id] = []
+
+        # Go through each of the binary history features.
+        for feature in binary_feature_list:
+            feature_freq = line[feature_index_dct[feature]]
+            if feature_freq == '有':
+                feature_dct[inhospital_id] += [(feature, 1.0)]
+
+        # Add the cancer type. Binarize the V病理类型 column.
+        cancer_type = line[header_line.index('V病理类型')]
+        if '癌' in cancer_type:
+            feature_dct[inhospital_id] += [(cancer_type, 1.0)]
+            if cancer_type not in cancer_list:
+                cancer_list += [cancer_type]
+
+        # Add metastasis site. Binarize these columns.
+        for metastasis_col in ['V侵及或转移部位', 'V肿瘤并发症']:
+            metastasis_list = line[header_line.index(metastasis_col)].split('、')
+            for metastasis in metastasis_list:
+                # The last list element is something like a Chinese space.
+                if metastasis in ['董海涛', '卢雯平', '不详', '', '　']:
+                    continue
+                feature_dct[inhospital_id] += [(metastasis, 1.0)]
+                if metastasis not in cancer_list:
+                    cancer_list += [metastasis]
+    f.close()
+    return feature_dct, binary_feature_list + cancer_list

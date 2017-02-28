@@ -69,7 +69,7 @@ def plot_point_list(point_list, no_prosnet):
 
 def main():
     generate_folder()
-    # run_clustering_scripts()
+    run_clustering_scripts()
     point_list, no_prosnet = read_clustering_output()
     plot_point_list(point_list, no_prosnet)
 

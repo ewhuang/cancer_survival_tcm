@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 ### Author: Edward Huang
 
-from file_operations import read_spreadsheet
+from file_operations import read_spreadsheet, read_smoking_history
 import numpy as np
 from scipy.stats import entropy
 from sklearn.metrics.pairwise import cosine_similarity
@@ -109,8 +109,13 @@ def main():
     feature_dct_list, master_feature_list = [], []
     for fname in ('cancer_other_info_herbmed', 'cancer_other_info_mr_symp',
         'cancer_syndrome_syndromes', 'incase_check', 'cancer_drug_2017_sheet2',
-        'medical_history'):
-        feature_dct, feature_list = read_spreadsheet('./data/%s.txt' % fname)
+        'smoking_history'):
+        # Smoking history has a separate reading function.
+        if fname == 'smoking_history':
+            feature_dct, feature_list = read_smoking_history()
+        else:
+            feature_dct, feature_list = read_spreadsheet('./data/%s.txt' %
+                fname)
         # Update the list of feature dictionaries.
         feature_dct_list += [feature_dct]
         # Update the master feature list. Some symptoms occur in the tests, so

@@ -5,6 +5,7 @@
 
 from collections import Counter
 from file_operations import read_feature_matrix, read_spreadsheet
+from file_operations import read_smoking_history
 import os
 import numpy as np
 import operator
@@ -36,7 +37,7 @@ def get_col_idx_lst(feature_list, feature_type):
         test_list = read_spreadsheet('./data/incase_check.txt')[1]
         feat_set = set(symp_list).union(test_list)
     elif feature_type == 'history':
-        feat_set = read_spreadsheet('./data/medical_history.txt')[1]
+        feat_set = read_smoking_history()[1]
     elif feature_type == 'treatments':
         herb_list = read_spreadsheet('./data/cancer_other_info_herbmed.txt')[1]
         drug_list = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
@@ -104,7 +105,7 @@ def get_cluster_symptoms(clus_idx_lst, feature_list, feature_matrix,
         with np.errstate(invalid='ignore'):
             t_stat, p_value = ttest_ind(clus_col, non_clus_col)
 
-        if (p_value / 2.0) < 0.1:
+        if (p_value / 2.0) < 0.01:
             symptom = feature_list[symp_idx]
             clus_mean, non_clus_mean = np.mean(clus_col), np.mean(non_clus_col)
             if clus_mean == non_clus_mean:
@@ -221,7 +222,7 @@ def sequential_cluster():
     symp_feature_matrix = feature_matrix[:,symp_idx_lst]
     # TODO: Initial number of clusters when clustering on symptoms.
     # num_clusters = symp_feature_matrix.shape[1]
-    num_clusters = 5
+    num_clusters = 10
     print 'initial num clusters:', num_clusters
     labels = get_cluster_labels(symp_feature_matrix, num_clusters)
 
@@ -232,7 +233,7 @@ def sequential_cluster():
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
     for i in range(num_clusters):
-        if labels.count(i) < 3:
+        if labels.count(i) < max(num_clusters, 3):
             continue
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]

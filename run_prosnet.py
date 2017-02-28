@@ -61,10 +61,18 @@ def get_coocc_edge_set(fname_a, fname_b):
     Get the symptom-herb relations from the co-occurrence counts of the patient
     records.
     '''
+    print fname_a, fname_b
     coocc_edge_set = set([])
     # Read the respective patient dictionaries.
-    patient_dct_a = file_operations.read_spreadsheet(fname_a)[0]
-    patient_dct_b = file_operations.read_spreadsheet(fname_b)[0]
+    if 'smoking_history' in fname_a:
+        patient_dct_a = file_operations.read_smoking_history()[0]
+    else:
+        patient_dct_a = file_operations.read_spreadsheet(fname_a)[0]
+    # Smoking history has a different format than the other spreadsheets.
+    if 'smoking_history' in fname_b:
+        patient_dct_b = file_operations.read_smoking_history()[0]
+    else:
+        patient_dct_b = file_operations.read_spreadsheet(fname_b)[0]
     # Get the intersecting set of patients in both dictionaries.
     patient_set = set(patient_dct_a.keys()).intersection(patient_dct_b.keys())
     for inhospital_id in patient_set:
@@ -139,7 +147,7 @@ def main():
     f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h',
         'cancer_other_info_herbmed'), ('n', 'cancer_syndrome_syndromes'
         ), ('d', 'cancer_drug_2017_sheet2'), ('t', 'incase_check'), ('v',
-        'medical_history')]
+        'smoking_history')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
@@ -162,6 +170,10 @@ def main():
         # for j in range(i + 1, len(f_tuples)):
         for j in range(i, len(f_tuples)):
             node_type_b, fname_b = f_tuples[j]
+            # Skip test-test edges and history-history edges. TODO.
+            # if (node_type_a, node_type_b) in [('t', 't'), ('v', 'v')]:
+            # if (node_type_a, node_type_b) == ('v', 'v'):
+            #     continue
             # Get the co-occurrence edge set.
             edge_set = get_coocc_edge_set('./data/%s.txt' % fname_a,
                 './data/%s.txt' % fname_b)
@@ -184,4 +196,4 @@ def main():
 if __name__ == '__main__':
     start_time = time.time()
     main()
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print("\n--- %s seconds ---" % (time.time() - start_time))
