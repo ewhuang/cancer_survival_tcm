@@ -138,7 +138,8 @@ def main():
     # Symptom file must always come before herb file here.
     f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h',
         'cancer_other_info_herbmed'), ('n', 'cancer_syndrome_syndromes'
-        ), ('d', 'cancer_drug_2017_sheet2'), ('t', 'incase_check')]
+        ), ('d', 'cancer_drug_2017_sheet2'), ('t', 'incase_check'), ('v',
+        'medical_history')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):

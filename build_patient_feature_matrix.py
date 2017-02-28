@@ -108,7 +108,8 @@ def main():
 
     feature_dct_list, master_feature_list = [], []
     for fname in ('cancer_other_info_herbmed', 'cancer_other_info_mr_symp',
-        'cancer_syndrome_syndromes', 'incase_check', 'cancer_drug_2017_sheet2'):
+        'cancer_syndrome_syndromes', 'incase_check', 'cancer_drug_2017_sheet2',
+        'medical_history'):
         feature_dct, feature_list = read_spreadsheet('./data/%s.txt' % fname)
         # Update the list of feature dictionaries.
         feature_dct_list += [feature_dct]

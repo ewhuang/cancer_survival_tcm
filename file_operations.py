@@ -7,6 +7,22 @@
 from collections import OrderedDict
 import numpy as np
 
+def read_case_info():
+    '''
+    Get only the inhospital_id values that correspond to a first-time visit.
+    '''
+    first_time_id_list = []
+    f = open('./data/cancer_caseinfo.txt', 'r')
+    for i, line in enumerate(f):
+        if i == 0:
+            continue
+        line = line.split()
+        if line[1] != '1':
+            continue
+        first_time_id_list += [line[0]]
+    f.close()
+    return first_time_id_list
+
 # build_patient_feature_matrix.py
 # drug_herb_synergistic_survival.py
 # run_prosnet.py
@@ -18,6 +34,7 @@ def read_spreadsheet(fname):
     Key: inhospital_id -> str
     Value: feature, feature frequency tuple -> (str, float)
     '''
+    first_time_id_list = read_case_info()
     feature_dct, unique_feature_list = OrderedDict({}), []
     f = open(fname, 'r')
     for i, line in enumerate(f):
@@ -58,10 +75,28 @@ def read_spreadsheet(fname):
         elif 'drug_2017' in fname:
             assert len(line) == 10
             inhospital_id, feature, feature_freq = line[0], line[1], line[4]
+        elif 'medical_history' in fname:
+            assert len(line) == 5
+            unique_feature_list = ['V肝炎病史', 'V高血压病史', 'V冠心病史', 'V有无慢性肺部疾病史']
+            inhospital_id, feat_freq_list = line[0], line[1:]
+            if '无' not in feat_freq_list and '有' not in feat_freq_list:
+                continue
+            if inhospital_id not in feature_dct:
+                feature_dct[inhospital_id] = []
+            for i, e in enumerate(feat_freq_list):
+                if '无' in e:
+                    feature_freq = 0
+                else:
+                    feature_freq = 1
+                feature_dct[inhospital_id] += [(unique_feature_list[i],
+                    feature_freq)]
+            continue
         else:
             print 'file_operations.py: No such file!'
             exit()
-
+        # Don't use second or later visits. TODO.
+        if inhospital_id not in first_time_id_list:
+            continue
         if inhospital_id not in feature_dct:
             feature_dct[inhospital_id] = []
         # Deal with folder path / issues.

@@ -28,16 +28,21 @@ def get_col_idx_lst(feature_list, feature_type):
     Given a feature matrix and a feature type, only keep the columns of the
     matrix that are of that feature type.
     '''
-    assert feature_type in ['symptoms', 'treatments']
+    assert feature_type in ['symptoms', 'treatments', 'history', 'tests']
 
+    # TODO: First cluster on medical history, then cluster on current status.
     if feature_type == 'symptoms':
         symp_list = read_spreadsheet('./data/cancer_other_info_mr_symp.txt')[1]
         test_list = read_spreadsheet('./data/incase_check.txt')[1]
         feat_set = set(symp_list).union(test_list)
+    elif feature_type == 'history':
+        feat_set = read_spreadsheet('./data/medical_history.txt')[1]
     elif feature_type == 'treatments':
         herb_list = read_spreadsheet('./data/cancer_other_info_herbmed.txt')[1]
         drug_list = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
         feat_set = set(herb_list).union(drug_list)
+    elif feature_type == 'tests':
+        feat_set = read_spreadsheet('./data/incase_check.txt')[1]
     # Get column indices of the current feature type.
     col_idx_lst = [i for i, e in enumerate(feature_list) if e in feat_set]
     return col_idx_lst
@@ -99,7 +104,7 @@ def get_cluster_symptoms(clus_idx_lst, feature_list, feature_matrix,
         with np.errstate(invalid='ignore'):
             t_stat, p_value = ttest_ind(clus_col, non_clus_col)
 
-        if (p_value / 2.0) < 0.01:
+        if (p_value / 2.0) < 0.1:
             symptom = feature_list[symp_idx]
             clus_mean, non_clus_mean = np.mean(clus_col), np.mean(non_clus_col)
             if clus_mean == non_clus_mean:
@@ -146,7 +151,7 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         # > marker means that largest cluster has a larger mean than the
         # combined clusters.
         max_mean, merge_mean = np.mean(max_feat_list), np.mean(merged_feat_list)
-        assert len(max_feat_list) > len(merged_feat_list)
+        # assert len(max_feat_list) > len(merged_feat_list)
         if max_mean == merge_mean:
             tag = '='
         elif max_mean > merge_mean:
@@ -210,21 +215,24 @@ def sequential_cluster():
         assert np.array_equal(feature_matrix, base_feature_matrix)
 
     # First, only cluster on symptoms and tests for sequential clustering.
-    symp_idx_lst = get_col_idx_lst(feature_list, 'symptoms')
+    # TODO: currently initially clustering on history.
+    # symp_idx_lst = get_col_idx_lst(feature_list, 'symptoms')
+    symp_idx_lst = get_col_idx_lst(feature_list, 'history')
     symp_feature_matrix = feature_matrix[:,symp_idx_lst]
     # TODO: Initial number of clusters when clustering on symptoms.
     # num_clusters = symp_feature_matrix.shape[1]
-    num_clusters = 10
+    num_clusters = 5
     print 'initial num clusters:', num_clusters
     labels = get_cluster_labels(symp_feature_matrix, num_clusters)
 
     # Cluster a second time, this time on drugs and herbs.
-    drug_idx_lst = get_col_idx_lst(feature_list, 'treatments')
+    # TODO: Currently initially clustering on medical tests.
+    # drug_idx_lst = get_col_idx_lst(feature_list, 'treatments')
+    drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
-
     for i in range(num_clusters):
-        if labels.count(i) < 20:
+        if labels.count(i) < 3:
             continue
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
@@ -245,7 +253,6 @@ def sequential_cluster():
         write_clusters(sub_labels, 3, sub_survival_mat, sub_df_fname)
         # Perform feature analysis on the original feature matrix, but only
         # consider the drugs.
-        # TODO: may not be aligning the right features.
         feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
             drug_idx_lst], drug_list, sub_feat_fname, symptom_line)
 
