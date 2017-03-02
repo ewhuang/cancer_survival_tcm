@@ -67,9 +67,13 @@ def read_spreadsheet(fname):
             assert len(line) == 9
             inhospital_id, feature, feature_freq = line[0], line[3], line[4]
             # Skip negative tests.
-            if feature_freq in ['无', '0级', '否', '没有']:
+            # TODO: good results with without cost condition.
+            if feature_freq in ['无', '否', '没有'] or '费' in feature or (feature
+                in ['住院天数', '阴影部位', '影像学诊断类型']):
                 inhospital_id = 'bad_id'
                 continue
+            elif '级' in feature_freq:
+                feature_freq = feature_freq[:feature_freq.index('级')]
             try:
                 feature_freq = float(feature_freq)
                 # Skip 0 features.
@@ -81,8 +85,16 @@ def read_spreadsheet(fname):
         elif 'drug_2017' in fname:
             assert len(line) == 10
             inhospital_id, feature, feature_freq = line[0], line[1], line[4]
+        # TODO: Currently adding in senior citizen status.
+        elif 'cancer_caseinfo' in fname:
+            assert len(line) == 7
+            inhospital_id, feature, feature_freq = line[0], 'senior', line[6]
+            if int(feature_freq) >= 65:
+                feature_freq = 1
+            else:
+                continue
         else:
-            print 'file_operations.py: No such file!'
+            print 'file_operations.py line 97: No such file!'
             exit()
         # Don't use second or later visits. TODO.
         if inhospital_id not in first_time_id_list:
@@ -183,7 +195,9 @@ def read_smoking_history():
     first_time_id_list = read_case_info()
     feature_dct = OrderedDict({})
     binary_feature_list = (['V肝炎病史', 'V高血压病史', 'V冠心病史', 'V家族遗传性疾病',
-                'V输血史', 'V吸烟史', 'V药物过敏史', 'V有无慢性肺部疾病史', 'V中毒史',
+                # 'V输血史', 'V吸烟史', 'V药物过敏史', 'V有无慢性肺部疾病史', 'V中毒史',
+                # TODO: eliminating some features.
+                'V输血史', 'V吸烟史', 'V有无慢性肺部疾病史',
                 'V肿瘤家族史'])
     cancer_list = []
     f = open('./data/smoking_history.txt', 'r')
@@ -227,5 +241,27 @@ def read_smoking_history():
                 feature_dct[inhospital_id] += [(metastasis, 1.0)]
                 if metastasis not in cancer_list:
                     cancer_list += [metastasis]
+        # Tumor stage column.
+        stage = line[header_line.index('VTNM分期')]
+        # Skip unknown or bogus values.
+        if '期' in stage and '不详' not in stage:
+            stage_dct = {'IA':1, 'IB':2, 'II':3, 'IIA':4, 'IIB':5, 'III':6, 'IIIA':7, 'IIIB':8, 'IV':9}
+            stage = stage[:stage.index('期')]
+            stage = stage_dct[stage]
+            feature_dct[inhospital_id] += [('VTNM分期', stage)]
+            if 'VTNM分期' not in cancer_list:
+                cancer_list += ['VTNM分期']
+        # Add numerical features.
+        # numerical_features = ['VKPS', 'VM', 'VN', 'VT', 'VW']
+        numerical_features = ['VKPS', 'VM', 'VN', 'VT']
+        for numerical_col in numerical_features:
+            numerical_val = line[header_line.index(numerical_col)]
+            if numerical_val == '0':
+                continue
+            try:
+                feature_dct[inhospital_id] += [(numerical_col,
+                    float(numerical_val))]
+            except Exception:
+                continue
     f.close()
-    return feature_dct, binary_feature_list + cancer_list
+    return feature_dct, binary_feature_list + cancer_list + numerical_features

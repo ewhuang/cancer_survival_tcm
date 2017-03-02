@@ -218,18 +218,18 @@ def sequential_cluster():
     # First, only cluster on symptoms and tests for sequential clustering.
     # TODO: currently initially clustering on history.
     # symp_idx_lst = get_col_idx_lst(feature_list, 'symptoms')
-    symp_idx_lst = get_col_idx_lst(feature_list, 'history')
+    symp_idx_lst = get_col_idx_lst(feature_list, 'tests')
     symp_feature_matrix = feature_matrix[:,symp_idx_lst]
     # TODO: Initial number of clusters when clustering on symptoms.
     # num_clusters = symp_feature_matrix.shape[1]
-    num_clusters = 10
+    num_clusters = 3
     print 'initial num clusters:', num_clusters
     labels = get_cluster_labels(symp_feature_matrix, num_clusters)
 
     # Cluster a second time, this time on drugs and herbs.
     # TODO: Currently initially clustering on medical tests.
     # drug_idx_lst = get_col_idx_lst(feature_list, 'treatments')
-    drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
+    drug_idx_lst = get_col_idx_lst(feature_list, 'history')
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
     for i in range(num_clusters):

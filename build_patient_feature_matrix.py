@@ -27,7 +27,6 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
             for (feature, feature_freq) in feature_dct[inhospital_id]:
                 row[master_feature_list.index(feature)] += feature_freq
         feature_matrix += [row]
-
     return np.array(feature_matrix)
 
 def impute_missing_data(feature_matrix, master_feature_list):
@@ -58,10 +57,14 @@ def impute_missing_data(feature_matrix, master_feature_list):
 
     vector_matrix = read_prosnet_output(master_feature_list)
     # TODO: absolute value.
-    similarity_matrix = np.abs(cosine_similarity(vector_matrix))
-    # similarity_matrix = cosine_similarity(vector_matrix)
+    # similarity_matrix = np.abs(cosine_similarity(vector_matrix))
+    similarity_matrix = cosine_similarity(vector_matrix)
 
     similarity_matrix[similarity_matrix < sim_thresh] = 0
+    # Remove non-diagonal 1s. TODO.
+    # similarity_matrix[similarity_matrix == 1] = 0
+    np.fill_diagonal(similarity_matrix, 1)
+
     # Multiply the two feature matrix and the similarity matrix.
     enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
 
@@ -109,7 +112,7 @@ def main():
     feature_dct_list, master_feature_list = [], []
     for fname in ('cancer_other_info_herbmed', 'cancer_other_info_mr_symp',
         'cancer_syndrome_syndromes', 'incase_check', 'cancer_drug_2017_sheet2',
-        'smoking_history'):
+        'smoking_history', 'cancer_caseinfo'):
         # Smoking history has a separate reading function.
         if fname == 'smoking_history':
             feature_dct, feature_list = read_smoking_history()

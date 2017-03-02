@@ -56,23 +56,26 @@ def get_ppi_edge_set():
     f.close()
     return ppi_edge_set
 
-def get_coocc_edge_set(fname_a, fname_b):
+def get_patient_dct(fname):
+    if 'smoking_history' in fname:
+        patient_dct = file_operations.read_smoking_history()[0]
+        age_fname = './data/cancer_caseinfo.txt'
+        age_dct = file_operations.read_spreadsheet(age_fname)[0]
+        # Tack on age to the medical history.
+        for inhospital_id in patient_dct:
+            if inhospital_id in age_dct:
+                patient_dct[inhospital_id] += [(age_dct[inhospital_id][0])]
+    else:
+        fname = './data/%s.txt' % fname
+        patient_dct = file_operations.read_spreadsheet(fname)[0]
+    return patient_dct
+
+def get_coocc_edge_set(patient_dct_a, patient_dct_b):
     '''
     Get the symptom-herb relations from the co-occurrence counts of the patient
     records.
     '''
-    print fname_a, fname_b
     coocc_edge_set = set([])
-    # Read the respective patient dictionaries.
-    if 'smoking_history' in fname_a:
-        patient_dct_a = file_operations.read_smoking_history()[0]
-    else:
-        patient_dct_a = file_operations.read_spreadsheet(fname_a)[0]
-    # Smoking history has a different format than the other spreadsheets.
-    if 'smoking_history' in fname_b:
-        patient_dct_b = file_operations.read_smoking_history()[0]
-    else:
-        patient_dct_b = file_operations.read_spreadsheet(fname_b)[0]
     # Get the intersecting set of patients in both dictionaries.
     patient_set = set(patient_dct_a.keys()).intersection(patient_dct_b.keys())
     for inhospital_id in patient_set:
@@ -93,22 +96,11 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
     # The order of node type a, b must match the edge order in edge_set.
     node_type_tup = (node_type_a, node_type_b)
 
-    # TODO: Set edge weight.
-    # if 'p' in node_type_tup:
-    #     edge_weight = 1.0
-    # else:
-    #     edge_weight = 0.25
-    edge_weight = 1.0
-
     for edge in edge_set:
         # Check if edge has already been written.
         if edge in global_edge_set or edge[::-1] in global_edge_set:
             continue
         global_edge_set.add(edge)
-
-        # TODO: making dict symptom-herb edges weight = 1.0
-        # if edge in dict_symptom_herb_set:
-        #     edge_weight = 1.0
 
         # Write out the edge.
         for i, node in enumerate(edge):
@@ -118,9 +110,9 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
                 node_out.write('%s\t%s\n' % (node, node_type_tup[i]))
             # Write out the edge.
             edge_out.write('%s\t' % node)
-        # Edge weights are all = 1. Map the edge type to a letter.
+        # Edge weights are all = 1. Map the edge type to a letter. TODO.
         edge_label = string.ascii_lowercase[num_edge_types]
-        edge_out.write('%g\t%s\n' % (edge_weight, edge_label))
+        edge_out.write('1\t%s\n' % edge_label)
     num_edge_types += 1
 
 def run_prosnet():
@@ -142,7 +134,6 @@ def main():
     num_dim = sys.argv[1]
     assert num_dim.isdigit()
 
-    # m: symptoms, n: syndromes, h: herbs, d: drugs, t: tests.
     # Symptom file must always come before herb file here.
     f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h',
         'cancer_other_info_herbmed'), ('n', 'cancer_syndrome_syndromes'
@@ -156,30 +147,22 @@ def main():
     edge_out = open('%s/prosnet_edge_list.txt' % input_folder, 'w')
 
     # # Start off by writing out the protein-herb list and PPI list.
-    # TODO: Decide whether or not to use prior information.
     protein_herb_edge_set = get_protein_herb_edge_set()
     write_files(node_out, edge_out, protein_herb_edge_set, 'p', 'h')
     ppi_edge_set = get_ppi_edge_set()
     write_files(node_out, edge_out, ppi_edge_set, 'p', 'p')
 
-    # global dict_symptom_herb_set
     # Loop through every pair of node types.
     for i in range(len(f_tuples)):
         node_type_a, fname_a = f_tuples[i]
-        # TODO: currently adding in same-type edges (i.e., herb-herb edges)
-        # for j in range(i + 1, len(f_tuples)):
+        patient_dct_a = get_patient_dct(fname_a)
         for j in range(i, len(f_tuples)):
             node_type_b, fname_b = f_tuples[j]
-            # Skip test-test edges and history-history edges. TODO.
-            # if (node_type_a, node_type_b) in [('t', 't'), ('v', 'v')]:
-            # if (node_type_a, node_type_b) == ('v', 'v'):
-            #     continue
+            patient_dct_b = get_patient_dct(fname_b)
             # Get the co-occurrence edge set.
-            edge_set = get_coocc_edge_set('./data/%s.txt' % fname_a,
-                './data/%s.txt' % fname_b)
+            edge_set = get_coocc_edge_set(patient_dct_a, patient_dct_b)
 
             # # symptom-herb edges should add the medical textbook's edges.
-            # TODO. Adding in the herb-symptom dictionary.
             if 'symp' in fname_a and 'herb' in fname_b:
                 edge_set = edge_set.union(
                     file_operations.get_dictionary_symptom_herb_set())
