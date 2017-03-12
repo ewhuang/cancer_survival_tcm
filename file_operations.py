@@ -241,6 +241,7 @@ def read_smoking_history():
                 feature_dct[inhospital_id] += [(metastasis, 1.0)]
                 if metastasis not in cancer_list:
                     cancer_list += [metastasis]
+        
         # Tumor stage column.
         stage = line[header_line.index('VTNM分期')]
         # Skip unknown or bogus values.

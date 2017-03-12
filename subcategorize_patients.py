@@ -12,6 +12,7 @@ import operator
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import ttest_ind
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 import subprocess
 import sys
 
@@ -53,10 +54,21 @@ def get_cluster_labels(feature_matrix, num_clusters):
     Clusters using K-Means with the given number of clusters on the cityblock
     distance matrix of the given feature matrix.
     '''
-    distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
+    # TODO: PCA.
+    num_comp = int(feature_matrix.shape[1] * 0.9)
+    pca = PCA(n_components=num_comp)
+    distance_matrix = pca.fit_transform(feature_matrix)
+
+    # distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
+
     est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
     est.fit(distance_matrix)
     return list(est.labels_)
+
+    # distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
+    # est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
+    # est.fit(distance_matrix)
+    # return list(est.labels_)
 
 def write_clusters(labels, num_clusters, survival_mat, out_name):
     '''
@@ -112,7 +124,7 @@ def get_cluster_symptoms(clus_idx_lst, feature_list, feature_matrix,
                 symptom += '='
             elif clus_mean > non_clus_mean:
                 symptom += '>'
-            else:
+            elif clus_mean < non_clus_mean:
                 symptom += '<'
             symptom_cands += [symptom]
     return ', '.join(symptom_cands) + '\n'
@@ -218,7 +230,7 @@ def sequential_cluster():
     # First, only cluster on symptoms and tests for sequential clustering.
     # TODO: currently initially clustering on history.
     # symp_idx_lst = get_col_idx_lst(feature_list, 'symptoms')
-    symp_idx_lst = get_col_idx_lst(feature_list, 'tests')
+    symp_idx_lst = get_col_idx_lst(feature_list, 'history')
     symp_feature_matrix = feature_matrix[:,symp_idx_lst]
     # TODO: Initial number of clusters when clustering on symptoms.
     # num_clusters = symp_feature_matrix.shape[1]
@@ -229,7 +241,7 @@ def sequential_cluster():
     # Cluster a second time, this time on drugs and herbs.
     # TODO: Currently initially clustering on medical tests.
     # drug_idx_lst = get_col_idx_lst(feature_list, 'treatments')
-    drug_idx_lst = get_col_idx_lst(feature_list, 'history')
+    drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
     for i in range(num_clusters):
