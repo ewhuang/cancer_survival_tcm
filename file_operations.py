@@ -63,25 +63,41 @@ def read_spreadsheet(fname):
         elif 'syndrome_syndromes' in fname:
             assert len(line) == 3
             inhospital_id, feature, feature_freq = line[1], line[2], 1
-        elif 'incase_check' in fname:
-            assert len(line) == 9
-            inhospital_id, feature, feature_freq = line[0], line[3], line[4]
-            # Skip negative tests.
-            # TODO: good results with without cost condition.
-            if feature_freq in ['无', '否', '没有'] or '费' in feature or (feature
-                in ['住院天数', '阴影部位', '影像学诊断类型']):
-                inhospital_id = 'bad_id'
+        # elif 'incase_check' in fname:
+        #     assert len(line) == 9
+        #     inhospital_id, feature, feature_freq = line[0], line[3], line[4]
+        #     # Skip negative tests.
+        #     # TODO: good results with without cost condition.
+        #     if feature_freq in ['无', '否', '没有'] or '费' in feature or (feature
+        #         in ['住院天数', '阴影部位', '影像学诊断类型']):
+        #         inhospital_id = 'bad_id'
+        #         continue
+        #     elif '级' in feature_freq:
+        #         feature_freq = feature_freq[:feature_freq.index('级')]
+        #     try:
+        #         feature_freq = float(feature_freq)
+        #         # Skip 0 features.
+        #         if feature_freq == 0.0:
+        #             inhospital_id = 'bad_id'
+        #             continue
+        #     except:
+        #         feature_freq = 1
+        elif 'cancer_check_20170324' in fname:
+            if len(line) != 9:
+                continue
+            inhospital_id, feature, feature_freq = line[0], line[6], line[8]
+            if feature_freq == '有':
+                feature_freq = 1
+            elif feature_freq == '无':
                 continue
             elif '级' in feature_freq:
                 feature_freq = feature_freq[:feature_freq.index('级')]
             try:
                 feature_freq = float(feature_freq)
-                # Skip 0 features.
-                if feature_freq == 0.0:
-                    inhospital_id = 'bad_id'
-                    continue
             except:
-                feature_freq = 1
+                # TODO: What to do with unfloatable things.
+                # feature_freq = 1
+                continue
         elif 'drug_2017' in fname:
             assert len(line) == 10
             inhospital_id, feature, feature_freq = line[0], line[1], line[4]

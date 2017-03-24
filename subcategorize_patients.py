@@ -13,6 +13,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.stats import ttest_ind
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import normalize
 import subprocess
 import sys
 
@@ -44,7 +45,8 @@ def get_col_idx_lst(feature_list, feature_type):
         drug_list = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
         feat_set = set(herb_list).union(drug_list)
     elif feature_type == 'tests':
-        feat_set = read_spreadsheet('./data/incase_check.txt')[1]
+        # feat_set = read_spreadsheet('./data/incase_check.txt')[1]
+        feat_set = read_spreadsheet('./data/cancer_check_20170324.txt')[1]
     # Get column indices of the current feature type.
     col_idx_lst = [i for i, e in enumerate(feature_list) if e in feat_set]
     return col_idx_lst
@@ -55,10 +57,11 @@ def get_cluster_labels(feature_matrix, num_clusters):
     distance matrix of the given feature matrix.
     '''
     # TODO: PCA.
-    num_comp = int(feature_matrix.shape[1] * 0.9)
+    num_comp = int(feature_matrix.shape[1] * 0.5)
+    # num_comp = 50
     pca = PCA(n_components=num_comp)
-    distance_matrix = pca.fit_transform(feature_matrix)
-
+    distance_matrix = normalize(feature_matrix, norm='l1')
+    distance_matrix = pca.fit_transform(distance_matrix)
     # distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
 
     est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
@@ -117,7 +120,7 @@ def get_cluster_symptoms(clus_idx_lst, feature_list, feature_matrix,
         with np.errstate(invalid='ignore'):
             t_stat, p_value = ttest_ind(clus_col, non_clus_col)
 
-        if (p_value / 2.0) < 0.01:
+        if (p_value / 2.0) < 0.1:
             symptom = feature_list[symp_idx]
             clus_mean, non_clus_mean = np.mean(clus_col), np.mean(non_clus_col)
             if clus_mean == non_clus_mean:
@@ -234,7 +237,7 @@ def sequential_cluster():
     symp_feature_matrix = feature_matrix[:,symp_idx_lst]
     # TODO: Initial number of clusters when clustering on symptoms.
     # num_clusters = symp_feature_matrix.shape[1]
-    num_clusters = 3
+    num_clusters = 2
     print 'initial num clusters:', num_clusters
     labels = get_cluster_labels(symp_feature_matrix, num_clusters)
 
@@ -245,8 +248,9 @@ def sequential_cluster():
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
     for i in range(num_clusters):
-        if labels.count(i) < max(num_clusters, 3):
+        if labels.count(i) < max(num_clusters, 5):
             continue
+        print i, labels.count(i)
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
         assert len(clus_idx_lst) == labels.count(i)

@@ -134,11 +134,15 @@ def main():
     num_dim = sys.argv[1]
     assert num_dim.isdigit()
 
+    # x = file_operations.read_spreadsheet('./data/cancer_check_20170324.txt')[1]
+    # print ','.join(x)
+    # exit()
+
     # Symptom file must always come before herb file here.
     f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h',
         'cancer_other_info_herbmed'), ('n', 'cancer_syndrome_syndromes'
-        ), ('d', 'cancer_drug_2017_sheet2'), ('t', 'incase_check'), ('v',
-        'smoking_history')]
+        ), ('d', 'cancer_drug_2017_sheet2'), ('t', 'cancer_check_20170324'),
+        ('v', 'smoking_history')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):

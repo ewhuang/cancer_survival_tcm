@@ -6,6 +6,7 @@ from file_operations import read_spreadsheet, read_smoking_history
 import numpy as np
 from scipy.stats import entropy
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import normalize
 import sys
 
 # This script creates the feature matrices to get ready for experiments.
@@ -57,8 +58,8 @@ def impute_missing_data(feature_matrix, master_feature_list):
 
     vector_matrix = read_prosnet_output(master_feature_list)
     # TODO: absolute value.
-    # similarity_matrix = np.abs(cosine_similarity(vector_matrix))
-    similarity_matrix = cosine_similarity(vector_matrix)
+    similarity_matrix = np.abs(cosine_similarity(vector_matrix))
+    # similarity_matrix = cosine_similarity(vector_matrix)
 
     similarity_matrix[similarity_matrix < sim_thresh] = 0
     # Remove non-diagonal 1s. TODO.
@@ -111,8 +112,8 @@ def main():
 
     feature_dct_list, master_feature_list = [], []
     for fname in ('cancer_other_info_herbmed', 'cancer_other_info_mr_symp',
-        'cancer_syndrome_syndromes', 'incase_check', 'cancer_drug_2017_sheet2',
-        'smoking_history', 'cancer_caseinfo'):
+        'cancer_syndrome_syndromes', 'cancer_check_20170324',
+        'cancer_drug_2017_sheet2', 'smoking_history', 'cancer_caseinfo'):
         # Smoking history has a separate reading function.
         if fname == 'smoking_history':
             feature_dct, feature_list = read_smoking_history()
@@ -130,11 +131,20 @@ def main():
     # Create the numpy array, and remove bad columns.
     feature_matrix = build_feature_matrix(feature_dct_list, master_feature_list,
         patient_list)
+    # TODO: Print the number of 0 values.
+    num_zeros = 0.0
+    for row in feature_matrix:
+        for ele in row:
+            if ele == 0:
+                num_zeros += 1
+    print num_zeros / float(feature_matrix.shape[0])
+    print feature_matrix.shape
+
+    feature_matrix = normalize(feature_matrix, norm='l2')
 
     if isImputation:
         feature_matrix = impute_missing_data(feature_matrix,
             master_feature_list)
-
     # Write out to file.
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
         survival_dct)

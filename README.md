@@ -85,3 +85,10 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ```bash
     python feature_vs_survival_plot.py
     ```
+
+## Script for BIBM special issue BMC topic modeling.
+
+1.  Generates a file with only patient syndromes, symptoms, and herbs.
+    ```bash
+    python bmc_preprocess.py
+    ```
