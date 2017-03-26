@@ -66,7 +66,7 @@ def impute_missing_data(feature_matrix, master_feature_list):
     # similarity_matrix[similarity_matrix == 1] = 0
     np.fill_diagonal(similarity_matrix, 1)
 
-    # Multiply the two feature matrix and the similarity matrix.
+    # Multiply the feature matrix and the similarity matrix.
     enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
 
     return enriched_feature_matrix
@@ -140,12 +140,12 @@ def main():
     print num_zeros / float(feature_matrix.shape[0])
     print feature_matrix.shape
 
-    feature_matrix = normalize(feature_matrix, norm='l2')
-
     if isImputation:
         feature_matrix = impute_missing_data(feature_matrix,
             master_feature_list)
     # Write out to file.
+    feature_matrix = normalize(feature_matrix, norm='l1')
+
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
         survival_dct)
 
