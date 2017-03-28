@@ -6,6 +6,7 @@
 from collections import Counter
 from file_operations import read_feature_matrix, read_spreadsheet
 from file_operations import read_smoking_history
+import itertools
 import os
 import numpy as np
 import operator
@@ -50,27 +51,22 @@ def generate_directories():
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-def get_col_idx_lst(feature_list, feature_type):
+def get_col_idx_lst(feature_list, cluster_features):
     '''
     Given a feature matrix and a feature type, only keep the columns of the
     matrix that are of that feature type.
     '''
-    assert feature_type in ['symptoms', 'treatments', 'history', 'tests']
-
     # TODO: First cluster on medical history, then cluster on current status.
-    if feature_type == 'symptoms':
-        symp_list = read_spreadsheet('./data/cancer_other_info_mr_symp.txt')[1]
-        test_list = read_spreadsheet('./data/incase_check.txt')[1]
-        feat_set = set(symp_list).union(test_list)
-    elif feature_type == 'history':
-        feat_set = read_smoking_history()[1]
-    elif feature_type == 'treatments':
-        herb_list = read_spreadsheet('./data/cancer_other_info_herbmed.txt')[1]
-        drug_list = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
-        feat_set = set(herb_list).union(drug_list)
-    elif feature_type == 'tests':
-        # feat_set = read_spreadsheet('./data/incase_check.txt')[1]
-        feat_set = read_spreadsheet('./data/cancer_check_20170324.txt')[1]
+    feature_dct = {}
+    feature_dct['symptoms'] = read_spreadsheet('./data/cancer_other_info_mr_symp.txt')[1]
+    feature_dct['history'] = read_smoking_history()[1]
+    feature_dct['herbs'] = read_spreadsheet('./data/cancer_other_info_herbmed.txt')[1]
+    feature_dct['drugs'] = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
+    feature_dct['tests'] = read_spreadsheet('./data/cancer_check_20170324.txt')[1]
+
+    feat_set = set([])
+    for feat_type in cluster_features:
+        feat_set = feat_set.union(feature_dct[feat_type])
     # Get column indices of the current feature type.
     col_idx_lst = [i for i, e in enumerate(feature_list) if e in feat_set]
     return col_idx_lst
@@ -81,12 +77,12 @@ def get_cluster_labels(feature_matrix, num_clusters):
     distance matrix of the given feature matrix.
     '''
     # TODO: PCA.
-    num_comp = int(feature_matrix.shape[1] * 0.5)
+    # num_comp = int(feature_matrix.shape[1] * 0.5)
     # num_comp = 50
-    pca = PCA(n_components=num_comp)
+    # pca = PCA(n_components=num_comp)
     distance_matrix = normalize(feature_matrix, norm='l1')
-    distance_matrix = pca.fit_transform(distance_matrix)
-    # distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
+    # distance_matrix = pca.fit_transform(distance_matrix)
+    distance_matrix = squareform(pdist(distance_matrix, metric='cityblock'))
 
     est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
     est.fit(distance_matrix)
@@ -109,7 +105,6 @@ def write_clusters(labels, num_clusters, survival_mat, out_name):
     if num_clusters == 3:
         tag_list = [1 if label == max_clus else 0 for label in labels]
     else:
-        print 'Warning: Currently not merging clusters...'
         tag_list = labels[:]
 
     out = open(out_name, 'w')
@@ -210,35 +205,7 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         out.write('%s\t%g\t%s\n' % (feature, p_value, tag))
     out.close()
 
-def cluster_full_feature_matrix():
-    '''
-    Read the feature matrix, cluster, and then perform feature analysis.
-    '''
-    if isProsnet:
-        suffix = '_' + num_dim
-        df_fname = '%s/prosnet_%s.txt' % (df_folder, num_dim)
-        feat_fname = '%s/prosnet_%s.txt' % (feat_folder, num_dim)
-    else:
-        suffix = ''
-        df_fname = '%s/without_prosnet.txt' % df_folder
-        feat_fname = '%s/without_prosnet.txt' % feat_folder
-
-    feature_matrix, feature_list, survival_mat = read_feature_matrix(suffix)
-    # TODO: Currently clustering with 3 clusters, merging the smaller 2.
-    num_clusters = 3
-
-    labels = get_cluster_labels(feature_matrix, num_clusters)
-    write_clusters(labels, num_clusters, survival_mat, df_fname)
-
-    # Always use the original feature matrix for feature analysis.
-    base_feature_matrix, base_feat_list, base_surv_mat = read_feature_matrix()
-    assert base_surv_mat == survival_mat and feature_list == base_feat_list
-    if suffix == '':
-        assert np.array_equal(base_feature_matrix, feature_matrix)
-
-    feature_analysis(labels, base_feature_matrix, feature_list, feat_fname)
-
-def sequential_cluster():
+def sequential_cluster(cluster_features):
     '''
     First cluster on just symptom features, and then sub-cluster on treatment
     features.
@@ -257,7 +224,7 @@ def sequential_cluster():
     # First, only cluster on symptoms and tests for sequential clustering.
     # TODO: currently initially clustering on history.
     # symp_idx_lst = get_col_idx_lst(feature_list, 'symptoms')
-    symp_idx_lst = get_col_idx_lst(feature_list, 'history')
+    # symp_idx_lst = get_col_idx_lst(feature_list, 'history')
     # symp_feature_matrix = feature_matrix[:,symp_idx_lst]
     # TODO: Initial number of clusters when clustering on symptoms.
     # num_clusters = symp_feature_matrix.shape[1]
@@ -268,20 +235,18 @@ def sequential_cluster():
 
     # Cluster a second time, this time on drugs and herbs.
     # TODO: Currently initially clustering on medical tests.
-    drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
+    # drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
+    drug_idx_lst = get_col_idx_lst(feature_list, cluster_features)
     # drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
     for i in range(num_clusters):
-        # if labels.count(i) < max(num_clusters, 5):
-        #     continue
-        print i, labels.count(i)
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
         assert len(clus_idx_lst) == labels.count(i)
         # Find the symptoms that best characterize the cluster.
-        symptom_line = get_cluster_symptoms(clus_idx_lst, feature_list,
-            base_feature_matrix, symp_idx_lst)
+        # symptom_line = get_cluster_symptoms(clus_idx_lst, feature_list,
+        #     base_feature_matrix, symp_idx_lst)
         sub_labels = get_cluster_labels(drug_feature_matrix[clus_idx_lst], 2)
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
@@ -295,10 +260,10 @@ def sequential_cluster():
         write_clusters(sub_labels, 2, sub_survival_mat, sub_df_fname)
         # Perform feature analysis on the original feature matrix, but only
         # consider the drugs.
-        feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
-            drug_idx_lst], drug_list, sub_feat_fname, symptom_line)
         # feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
-        #     drug_idx_lst], drug_list, sub_feat_fname)
+        #     drug_idx_lst], drug_list, sub_feat_fname, symptom_line)
+        feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
+            drug_idx_lst], drug_list, sub_feat_fname)
 
 def main():
     if len(sys.argv) not in [2, 3]:
@@ -316,14 +281,18 @@ def main():
 
     generate_directories()
 
-    if matrix_type == 'full':
-        cluster_full_feature_matrix()
-    else:
-        sequential_cluster()
+    feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
+    x = itertools.chain.from_iterable(itertools.combinations(feature_list,
+        r) for r in range(len(feature_list) + 1))
 
-    # Call the R script.
-    command = 'Rscript survival_model.R %s' % df_folder
-    subprocess.call(command, shell=True)
+    for i in x:
+        if i == ():
+            continue
+        print list(i)
+        sequential_cluster(list(i))
+        # Call the R script.
+        command = 'Rscript survival_model.R %s' % df_folder
+        subprocess.call(command, shell=True)
 
 if __name__ == '__main__':
     main()

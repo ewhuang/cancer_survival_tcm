@@ -40,8 +40,10 @@ def impute_missing_data(feature_matrix, master_feature_list):
         Reads the output low-dimensional vectors created by prosnet.
         '''
         vector_dct = {}
-        f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
-            num_dim, 'r')
+        # f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
+        #     num_dim, 'r')
+        # TODO: iteration number.
+        f = open('../simons_mouse/Sheng/prosnet/model/embed_400.txt', 'r')
         for i, line in enumerate(f):
             if i == 0:
                 continue

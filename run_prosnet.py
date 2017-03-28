@@ -112,17 +112,20 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
             edge_out.write('%s\t' % node)
         # Edge weights are all = 1. Map the edge type to a letter. TODO.
         edge_label = string.ascii_lowercase[num_edge_types]
+        # edge_label = num_edge_types + 1
         edge_out.write('1\t%s\n' % edge_label)
     num_edge_types += 1
 
 def run_prosnet():
-    results_folder = './data/prosnet_data'
-    command = ('../simons_mouse/Sheng/prosnet/model/embed -node "%s/prosnet_'
+    os.chdir('../simons_mouse/Sheng/prosnet/model')
+    results_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
+    command = ('./embed -node "%s/prosnet_'
         'node_list.txt" -link "%s/prosnet_edge_list.txt" -output "%s/prosnet_'
         'node_vectors_%s_dims.vec" -binary 0 -size %s -negative 5 -samples 1 '
-        '-iters 1000 -threads 24 -model 2 -depth 10 -restart 0.8 '
-        '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 1' % (input_folder,
-            input_folder, results_folder, num_dim, num_dim, num_edge_types))
+        '-iters 1000 -threads 12 -model 2 -depth 10 -restart 0.8 '
+        '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 2' % (
+            results_folder, results_folder, results_folder, num_dim, num_dim,
+            num_edge_types))
     print command
     subprocess.call(command, shell=True)
 
@@ -130,7 +133,7 @@ def main():
     if len(sys.argv) != 2:
         print 'Usage:python %s num_dim' % sys.argv[0]
         exit()
-    global num_dim, input_folder
+    global num_dim
     num_dim = sys.argv[1]
     assert num_dim.isdigit()
 
@@ -156,7 +159,7 @@ def main():
     ppi_edge_set = get_ppi_edge_set()
     write_files(node_out, edge_out, ppi_edge_set, 'p', 'p')
 
-    # Loop through every pair of node types.
+    # # Loop through every pair of node types.
     for i in range(len(f_tuples)):
         node_type_a, fname_a = f_tuples[i]
         patient_dct_a = get_patient_dct(fname_a)
