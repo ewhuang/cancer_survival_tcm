@@ -43,7 +43,7 @@ def impute_missing_data(feature_matrix, master_feature_list):
         # f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
         #     num_dim, 'r')
         # TODO: iteration number.
-        f = open('../simons_mouse/Sheng/prosnet/model/embed_400.txt', 'r')
+        f = open('../simons_mouse/Sheng/prosnet/model/embed_450.txt', 'r')
         for i, line in enumerate(f):
             if i == 0:
                 continue
@@ -133,14 +133,14 @@ def main():
     # Create the numpy array, and remove bad columns.
     feature_matrix = build_feature_matrix(feature_dct_list, master_feature_list,
         patient_list)
-    # TODO: Print the number of 0 values.
+    # Print the number of 0 values.
     num_zeros = 0.0
     for row in feature_matrix:
         for ele in row:
             if ele == 0:
                 num_zeros += 1
-    print num_zeros / float(feature_matrix.shape[0])
-    print feature_matrix.shape
+    # print num_zeros / float(feature_matrix.shape[0])
+    # print feature_matrix.shape
 
     if isImputation:
         feature_matrix = impute_missing_data(feature_matrix,

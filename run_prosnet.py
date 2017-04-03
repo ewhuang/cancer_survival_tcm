@@ -122,7 +122,7 @@ def run_prosnet():
     command = ('./embed -node "%s/prosnet_'
         'node_list.txt" -link "%s/prosnet_edge_list.txt" -output "%s/prosnet_'
         'node_vectors_%s_dims.vec" -binary 0 -size %s -negative 5 -samples 1 '
-        '-iters 1000 -threads 12 -model 2 -depth 10 -restart 0.8 '
+        '-iters 500 -threads 12 -model 2 -depth 10 -restart 0.8 '
         '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 2' % (
             results_folder, results_folder, results_folder, num_dim, num_dim,
             num_edge_types))
@@ -136,10 +136,6 @@ def main():
     global num_dim
     num_dim = sys.argv[1]
     assert num_dim.isdigit()
-
-    # x = file_operations.read_spreadsheet('./data/cancer_check_20170324.txt')[1]
-    # print ','.join(x)
-    # exit()
 
     # Symptom file must always come before herb file here.
     f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h',

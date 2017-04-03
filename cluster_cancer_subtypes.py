@@ -77,12 +77,12 @@ def get_cluster_labels(feature_matrix, num_clusters):
     distance matrix of the given feature matrix.
     '''
     # TODO: PCA.
-    # num_comp = int(feature_matrix.shape[1] * 0.5)
+    num_comp = int(feature_matrix.shape[1] * 0.2)
     # num_comp = 50
-    # pca = PCA(n_components=num_comp)
+    pca = PCA(n_components=num_comp)
     distance_matrix = normalize(feature_matrix, norm='l1')
-    # distance_matrix = pca.fit_transform(distance_matrix)
-    distance_matrix = squareform(pdist(distance_matrix, metric='cityblock'))
+    distance_matrix = pca.fit_transform(distance_matrix)
+    distance_matrix = squareform(pdist(distance_matrix, metric))
 
     est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
     est.fit(distance_matrix)
@@ -190,7 +190,6 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         if max_mean == merge_mean:
             tag = '='
         elif max_mean > merge_mean:
-            # TODO. Currently showing the size of the '>' sign.
             tag = '%d>' % len(max_feat_list)
         else:
             tag = '<'
@@ -222,31 +221,18 @@ def sequential_cluster(cluster_features):
         assert np.array_equal(feature_matrix, base_feature_matrix)
 
     # First, only cluster on symptoms and tests for sequential clustering.
-    # TODO: currently initially clustering on history.
-    # symp_idx_lst = get_col_idx_lst(feature_list, 'symptoms')
-    # symp_idx_lst = get_col_idx_lst(feature_list, 'history')
-    # symp_feature_matrix = feature_matrix[:,symp_idx_lst]
-    # TODO: Initial number of clusters when clustering on symptoms.
-    # num_clusters = symp_feature_matrix.shape[1]
-    num_clusters = 3
-    print 'initial num clusters:', num_clusters
-    # labels = get_cluster_labels(symp_feature_matrix, num_clusters)
     labels = get_subtype_labels(survival_mat)
 
     # Cluster a second time, this time on drugs and herbs.
     # TODO: Currently initially clustering on medical tests.
-    # drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
     drug_idx_lst = get_col_idx_lst(feature_list, cluster_features)
-    # drug_idx_lst = get_col_idx_lst(feature_list, 'tests')
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
     drug_list = [feature_list[i] for i in drug_idx_lst]
-    for i in range(num_clusters):
+    for i in range(3):
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
         assert len(clus_idx_lst) == labels.count(i)
-        # Find the symptoms that best characterize the cluster.
-        # symptom_line = get_cluster_symptoms(clus_idx_lst, feature_list,
-        #     base_feature_matrix, symp_idx_lst)
+
         sub_labels = get_cluster_labels(drug_feature_matrix[clus_idx_lst], 2)
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
@@ -258,37 +244,36 @@ def sequential_cluster(cluster_features):
             sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
 
         write_clusters(sub_labels, 2, sub_survival_mat, sub_df_fname)
-        # Perform feature analysis on the original feature matrix, but only
-        # consider the drugs.
-        # feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
-        #     drug_idx_lst], drug_list, sub_feat_fname, symptom_line)
+        # Perform feature analysis on the original feature matrix.
         feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
             drug_idx_lst], drug_list, sub_feat_fname)
 
 def main():
-    if len(sys.argv) not in [2, 3]:
-        print 'Usage: python %s matrix_type num_dim<optional>' % sys.argv[0]
+    if len(sys.argv) not in [3, 4]:
+        print ('Usage: python %s matrix_type metric num_dim<optional>' %
+            sys.argv[0])
         exit()
-    global matrix_type, isProsnet
-    matrix_type, isProsnet = sys.argv[1], False
+    global matrix_type, metric, isProsnet
+    matrix_type, metric, isProsnet = sys.argv[1], sys.argv[2], False
     assert matrix_type in ['seq', 'full']
 
     # Optional dimensions argument for ProSNet experiments.
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         global num_dim
-        num_dim, isProsnet = sys.argv[2], True
+        num_dim, isProsnet = sys.argv[3], True
         assert num_dim.isdigit()
 
     generate_directories()
 
-    feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
-    x = itertools.chain.from_iterable(itertools.combinations(feature_list,
-        r) for r in range(len(feature_list) + 1))
+    # TODO: Change iterations of features.
+    # feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
+    # x = itertools.chain.from_iterable(itertools.combinations(feature_list,
+        # r) for r in range(len(feature_list) + 1))
+    x = [['tests', 'symptoms', 'history']]
 
     for i in x:
         if i == ():
             continue
-        print list(i)
         sequential_cluster(list(i))
         # Call the R script.
         command = 'Rscript survival_model.R %s' % df_folder

@@ -92,3 +92,20 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ```bash
     python bmc_preprocess.py
     ```
+
+s = 0.8,
+embed_500, 
+num_comp = int(feature_matrix.shape[1] * 0.2)
+pca = PCA(n_components=num_comp)
+distance_matrix = normalize(feature_matrix, norm='l1')
+distance_matrix = pca.fit_transform(distance_matrix)
+distance_matrix = squareform(pdist(distance_matrix, 'canberra'))
+
+[1] "./data/patient_dataframes_seq/prosnet_0_50.txt"
+[1] 0.2787531
+[1] "./data/patient_dataframes_seq/prosnet_1_50.txt"
+[1] 0.003232281
+[1] "./data/patient_dataframes_seq/prosnet_2_50.txt"
+[1] 0.008416973
+
+
