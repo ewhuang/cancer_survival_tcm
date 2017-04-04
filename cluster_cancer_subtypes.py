@@ -193,15 +193,18 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
             tag = '%d>' % len(max_feat_list)
         else:
             tag = '<'
-        p_val_dct[(feature, tag)] = p_value / 2.0
+        p_val_dct[(feature, tag, len(max_feat_list), max_mean,
+            len(merged_feat_list), merge_mean)] = p_value / 2.0
 
     p_val_dct = sorted(p_val_dct.items(), key=operator.itemgetter(1))
 
     # Write out to file.
     out = open(out_name, 'w')
     out.write(symp_line) # Write out the optional symptom line. Sequential only.
-    for ((feature, tag), p_value) in p_val_dct:
-        out.write('%s\t%g\t%s\n' % (feature, p_value, tag))
+    for ((feature, tag, max_len, max_mean, merge_len, merge_mean),
+        p_value) in p_val_dct:
+        out.write('%s\t%g\t%d\t%g\t%d\t%g\t%s\n' % (feature, p_value, max_len,
+        max_mean, merge_len, merge_mean, tag))
     out.close()
 
 def sequential_cluster(cluster_features):
@@ -245,8 +248,10 @@ def sequential_cluster(cluster_features):
 
         write_clusters(sub_labels, 2, sub_survival_mat, sub_df_fname)
         # Perform feature analysis on the original feature matrix.
-        feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
-            drug_idx_lst], drug_list, sub_feat_fname)
+        # feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
+        #     drug_idx_lst], drug_list, sub_feat_fname)
+        feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst],
+            feature_list, sub_feat_fname)
 
 def main():
     if len(sys.argv) not in [3, 4]:
@@ -269,7 +274,7 @@ def main():
     # feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
     # x = itertools.chain.from_iterable(itertools.combinations(feature_list,
         # r) for r in range(len(feature_list) + 1))
-    x = [['tests', 'symptoms', 'history']]
+    x = [['symptoms', 'history']]
 
     for i in x:
         if i == ():
