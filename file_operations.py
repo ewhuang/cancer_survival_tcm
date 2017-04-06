@@ -281,4 +281,5 @@ def read_smoking_history():
             except Exception:
                 continue
     f.close()
+    print ','.join(cancer_list)
     return feature_dct, binary_feature_list + cancer_list + numerical_features

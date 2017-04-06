@@ -139,15 +139,15 @@ def main():
         for ele in row:
             if ele == 0:
                 num_zeros += 1
-    # print num_zeros / float(feature_matrix.shape[0])
-    # print feature_matrix.shape
+    print num_zeros / float(feature_matrix.shape[0])
+    print feature_matrix.shape
 
     if isImputation:
         feature_matrix = impute_missing_data(feature_matrix,
             master_feature_list)
     # Write out to file.
     feature_matrix = normalize(feature_matrix, norm='l1')
-
+    print feature_matrix.shape
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
         survival_dct)
 

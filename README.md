@@ -69,6 +69,15 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     list shows the features that are significantly different between the two
     clusters within the sub-cluster.
 
+4.  Sub-typing pipeline. First classify patients into the cancer groups, and then
+    perform the clustering. Iterates through different similarity score thresholds
+    and distance metrics. Holds the dimension constant, must change in file.
+
+    ```bash
+    python read_subtype_output.py
+    ```
+    Runs cluster_cancer_subtypes.py internally.
+
 ## Post-experiment analysis
 
 1.  Tunes the similarity threshold from 0.0 to 0.5 (any similarity score < this

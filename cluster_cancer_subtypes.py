@@ -101,8 +101,7 @@ def write_clusters(labels, num_clusters, survival_mat, out_name):
     assert len(labels) == len(survival_mat)
     # First, determine the index of the largest cluster.
     max_clus = Counter(labels).most_common(1)[0][0]
-
-    if num_clusters == 3:
+    if num_clusters in [2, 3]:
         tag_list = [1 if label == max_clus else 0 for label in labels]
     else:
         tag_list = labels[:]
@@ -230,7 +229,7 @@ def sequential_cluster(cluster_features):
     # TODO: Currently initially clustering on medical tests.
     drug_idx_lst = get_col_idx_lst(feature_list, cluster_features)
     drug_feature_matrix = feature_matrix[:,drug_idx_lst]
-    drug_list = [feature_list[i] for i in drug_idx_lst]
+    # drug_list = [feature_list[i] for i in drug_idx_lst]
     for i in range(3):
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
@@ -274,7 +273,9 @@ def main():
     # feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
     # x = itertools.chain.from_iterable(itertools.combinations(feature_list,
         # r) for r in range(len(feature_list) + 1))
-    x = [['symptoms', 'history']]
+    # x = [['symptoms', 'history']]
+    x = [['tests', 'symptoms', 'history']]
+
 
     for i in x:
         if i == ():
