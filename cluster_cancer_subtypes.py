@@ -25,9 +25,10 @@ def get_subtype_labels(survival_mat):
     f = open('./data/smoking_history.txt', 'r')
     for line in f:
         inhospital_id = line.rstrip('\n\r').split('\t')[0]
-        if '腺癌' in line or '大细胞癌' in line or '肺泡' in line:
+        cancer = line.rstrip('\n\r').split('\t')[9]
+        if '腺癌' in cancer or '大细胞癌' in cancer or '肺泡' in cancer or '乳头状癌' in cancer:
             non_squamous += [inhospital_id]
-        elif '鳞癌' in line:
+        elif '鳞癌' in cancer:
             squamous += [inhospital_id]
     f.close()
     # Assign labels to patients.
@@ -189,7 +190,7 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         if max_mean == merge_mean:
             tag = '='
         elif max_mean > merge_mean:
-            tag = '%d>' % len(max_feat_list)
+            tag = '%d>' % 1
         else:
             tag = '<'
         p_val_dct[(feature, tag, len(max_feat_list), max_mean,
@@ -211,16 +212,15 @@ def sequential_cluster(cluster_features):
     First cluster on just symptom features, and then sub-cluster on treatment
     features.
     '''
-    if isProsnet:
+    if isImpute:
         suffix = '_' + num_dim
     else:
         suffix = ''
 
     feature_matrix, feature_list, survival_mat = read_feature_matrix(suffix)
-    base_feature_matrix, base_feat_lst, base_surv_mat = read_feature_matrix()
+    base_feature_matrix, base_feat_lst, base_surv_mat = read_feature_matrix(
+        'unnormalized')
     assert base_feat_lst == feature_list and survival_mat == base_surv_mat
-    if suffix == '':
-        assert np.array_equal(feature_matrix, base_feature_matrix)
 
     # First, only cluster on symptoms and tests for sequential clustering.
     labels = get_subtype_labels(survival_mat)
@@ -238,9 +238,12 @@ def sequential_cluster(cluster_features):
         sub_labels = get_cluster_labels(drug_feature_matrix[clus_idx_lst], 2)
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
-        if isProsnet:
+        if isImpute == 'prosnet':
             sub_df_fname = '%s/prosnet_%d_%s.txt' % (df_folder, i, num_dim)
             sub_feat_fname = '%s/prosnet_%d_%s.txt' % (feat_folder, i, num_dim)
+        elif isImpute == 'mean':
+            sub_df_fname = '%s/mean_%d.txt' % (df_folder, i)
+            sub_feat_fname = '%s/mean_%d.txt' % (feat_folder, i)
         else:
             sub_df_fname = '%s/without_prosnet_%d.txt' % (df_folder, i)
             sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
@@ -257,15 +260,18 @@ def main():
         print ('Usage: python %s matrix_type metric num_dim<optional>' %
             sys.argv[0])
         exit()
-    global matrix_type, metric, isProsnet
-    matrix_type, metric, isProsnet = sys.argv[1], sys.argv[2], False
+    global matrix_type, metric, isImpute
+    matrix_type, metric, isImpute = sys.argv[1], sys.argv[2], False
     assert matrix_type in ['seq', 'full']
 
     # Optional dimensions argument for ProSNet experiments.
     if len(sys.argv) == 4:
         global num_dim
-        num_dim, isProsnet = sys.argv[3], True
-        assert num_dim.isdigit()
+        num_dim = sys.argv[3]
+        if num_dim.isdigit():
+            isImpute = 'prosnet'
+        else:
+            isImpute = 'mean'
 
     generate_directories()
 
@@ -273,9 +279,8 @@ def main():
     # feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
     # x = itertools.chain.from_iterable(itertools.combinations(feature_list,
         # r) for r in range(len(feature_list) + 1))
-    # x = [['symptoms', 'history']]
-    x = [['tests', 'symptoms', 'history']]
-
+    x = [['symptoms', 'history']]
+    # x = [['tests', 'symptoms', 'history']]
 
     for i in x:
         if i == ():

@@ -6,7 +6,7 @@ from file_operations import read_spreadsheet, read_smoking_history
 import numpy as np
 from scipy.stats import entropy
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, Imputer
 import sys
 
 # This script creates the feature matrices to get ready for experiments.
@@ -29,6 +29,14 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
                 row[master_feature_list.index(feature)] += feature_freq
         feature_matrix += [row]
     return np.array(feature_matrix)
+
+def mean_impute_missing_data(feature_matrix):
+    '''
+    Given a feature matrix, fill in missing values of each column based on the
+    average of the non-zero values.
+    '''
+    imp = Imputer(missing_values=0, strategy='mean')
+    return imp.fit_transform(feature_matrix)
 
 def impute_missing_data(feature_matrix, master_feature_list):
     '''
@@ -74,17 +82,18 @@ def impute_missing_data(feature_matrix, master_feature_list):
     return enriched_feature_matrix
 
 def write_feature_matrix(feature_matrix, master_feature_list, patient_list,
-    survival_dct):
+    survival_dct, out_fname=''):
     '''
     Writes the feature matrix out to file, along with column labels. First
     column should be inhospital_id's, and the second/third column should be the
     death/time event.
     '''
-    results_folder = './data/feature_matrices'
-    if isImputation:
-        out_fname = '%s/feature_matrix_%s.txt' % (results_folder, num_dim)
-    else:
-        out_fname = '%s/feature_matrix.txt' % results_folder
+    if out_fname == '':
+        results_folder = './data/feature_matrices'
+        if isImputation:
+            out_fname = '%s/feature_matrix_%s.txt' % (results_folder, num_dim)
+        else:
+            out_fname = '%s/feature_matrix.txt' % results_folder
     out = open(out_fname, 'w')
     out.write('patient_id\tdeath\ttime\t%s\n' % '\t'.join(master_feature_list))
     for i, row in enumerate(feature_matrix):
@@ -95,18 +104,19 @@ def write_feature_matrix(feature_matrix, master_feature_list, patient_list,
     out.close()
 
 def main():
-    if len(sys.argv) not in [1, 3]:
+    if len(sys.argv) not in [1, 2, 3]:
         print 'Usage:python %s num_dim<optional> sim_thresh<optional>' % (
             sys.argv[0])
         exit()
     global isImputation
     isImputation = False
-    if len(sys.argv) == 3:
-        # Prosnet has a command line argument.
-        global num_dim, sim_thresh
-        num_dim, sim_thresh = sys.argv[1], float(sys.argv[2])
-        assert num_dim.isdigit()
+    if len(sys.argv) > 1:
+        global num_dim
+        num_dim = sys.argv[1]
         isImputation = True
+    if len(sys.argv) == 3:
+        global sim_thresh
+        sim_thresh = float(sys.argv[2])
 
     survival_dct = read_spreadsheet('./data/cancer_life_days.txt')[0]
     # Initialize our list of inhospital_id's.
@@ -139,15 +149,28 @@ def main():
         for ele in row:
             if ele == 0:
                 num_zeros += 1
-    print num_zeros / float(feature_matrix.shape[0])
-    print feature_matrix.shape
+    print 'average number of zeros', num_zeros / float(feature_matrix.shape[0])
+    print 'feature matrix shape', feature_matrix.shape
+    print (~feature_matrix.any(axis=0)).any()
+    print np.where(~feature_matrix.any(axis=0))[0]
+    # Write out to file a unnormalized file.
+    if not isImputation:
+        write_feature_matrix(feature_matrix, master_feature_list, patient_list,
+            survival_dct,
+            './data/feature_matrices/unnormalized_feature_matrix.txt')
 
-    if isImputation:
-        feature_matrix = impute_missing_data(feature_matrix,
-            master_feature_list)
-    # Write out to file.
+    # Normalize feature matrix.
     feature_matrix = normalize(feature_matrix, norm='l1')
     print feature_matrix.shape
+    # Perform either mean imputation or embedding imputation.
+    if isImputation:
+        if num_dim == 'mean':
+            feature_matrix = mean_impute_missing_data(feature_matrix)
+        elif num_dim.isdigit():
+            feature_matrix = impute_missing_data(feature_matrix,
+                master_feature_list)
+    print feature_matrix.shape
+    # Write out matrix out to file.
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
         survival_dct)
 

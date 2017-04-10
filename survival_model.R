@@ -18,6 +18,7 @@ change.files <- function(filename){
     }
     # TODO: Cannot print filename for plotting threshold sensitivity.
     print(filename)
+    print(exp$chisq)
     print(pv)
     if (pv < p_thresh) {
         pv_new<-prettyNum(pv, digits=3, width=4, format="fg")

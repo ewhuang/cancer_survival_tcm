@@ -136,7 +136,10 @@ def read_feature_matrix(suffix=''):
     '''
     feature_matrix, master_feature_list, survival_matrix = [], [], []
     # Process the filename.
-    fname = './data/feature_matrices/feature_matrix%s.txt' % suffix
+    if suffix == 'unnormalized':
+        fname = './data/feature_matrices/unnormalized_feature_matrix.txt'
+    else:
+        fname = './data/feature_matrices/feature_matrix%s.txt' % suffix
 
     f = open(fname, 'r')
     for i, line in enumerate(f):
@@ -147,6 +150,7 @@ def read_feature_matrix(suffix=''):
             continue
         # Survival matrix consists of (patient, death, time) tuples.
         survival_matrix += [(line[0], int(line[1]), float(line[2]))]
+        print len(feature_list), len(master_feature_list)
         assert len(feature_list) == len(master_feature_list)
         feature_matrix += [map(float, feature_list)]
     f.close()
@@ -252,7 +256,7 @@ def read_smoking_history():
             metastasis_list = line[header_line.index(metastasis_col)].split('、')
             for metastasis in metastasis_list:
                 # The last list element is something like a Chinese space.
-                if metastasis in ['董海涛', '卢雯平', '不详', '', '　']:
+                if metastasis in ['董海涛', '卢雯平', '不详', '不祥', '', '　']:
                     continue
                 feature_dct[inhospital_id] += [(metastasis, 1.0)]
                 if metastasis not in cancer_list:
@@ -261,7 +265,7 @@ def read_smoking_history():
         # Tumor stage column.
         stage = line[header_line.index('VTNM分期')]
         # Skip unknown or bogus values.
-        if '期' in stage and '不详' not in stage:
+        if '期' in stage and '不详' not in stage and '不祥' not in stage:
             stage_dct = {'IA':1, 'IB':2, 'II':3, 'IIA':4, 'IIB':5, 'III':6, 'IIIA':7, 'IIIB':8, 'IV':9}
             stage = stage[:stage.index('期')]
             stage = stage_dct[stage]
@@ -281,5 +285,4 @@ def read_smoking_history():
             except Exception:
                 continue
     f.close()
-    print ','.join(cancer_list)
     return feature_dct, binary_feature_list + cancer_list + numerical_features
