@@ -10,7 +10,7 @@ def script_call(metric, s):
     # TODO: add in 50 after cluster_cancer_subtypes.py seq 50.
     # subprocess.call('python build_patient_feature_matrix.py 100 %s' % s,
     #     shell=True)
-    subprocess.call('python cluster_cancer_subtypes.py seq %s > ./results/%s_out'
+    subprocess.call('python cluster_cancer_subtypes.py %s mean > ./results/mean_%s_out'
         % (metric, metric), shell=True)
 
     feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
@@ -18,16 +18,16 @@ def script_call(metric, s):
         r) for r in range(len(feature_list) + 1))
     x.next()
     i = 0
-    with open('./results/%s_out' % (metric)) as f:
+    with open('./results/mean_%s_out' % (metric)) as f:
         while True:
-            # Read 6 lines at a time.
-            next_n_lines = list(itertools.islice(f, 6))
+            # Read 9 lines at a time.
+            next_n_lines = list(itertools.islice(f, 9))
             if not next_n_lines:
                 break
             i += 1
             feat_list = x.next()
-            no_squam = next_n_lines[3].split()[1]
-            squam = next_n_lines[5].split()[1]
+            no_squam = next_n_lines[5].split()[1]
+            squam = next_n_lines[8].split()[1]
             if float(no_squam) < 0.01 and float(squam) < 0.01:
                 print metric, s, feat_list, next_n_lines[1].split()[1], no_squam, squam
 

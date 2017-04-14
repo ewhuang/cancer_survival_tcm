@@ -18,9 +18,21 @@ from sklearn.preprocessing import normalize
 import subprocess
 import sys
 
+def generate_directories():
+    global df_folder, feat_folder
+    df_folder = './data/patient_dataframes_seq'
+    feat_folder = './results/feature_p_values_seq'
+    plot_folder = './results/survival_plots_seq'
+    for folder in [df_folder, feat_folder, plot_folder]:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
 def get_subtype_labels(survival_mat):
+    '''
+    Split the patients into squamous-cell lung carcinoma and non-SQ NSCLC
+    patients.
+    '''
     # Get the set of squamous and non-squamous patients.
-    # TODO: Haven't gotten the small-cell patients.
     non_squamous, squamous = [], []
     f = open('./data/smoking_history.txt', 'r')
     for line in f:
@@ -43,31 +55,23 @@ def get_subtype_labels(survival_mat):
             labels += [0]
     return labels
 
-def generate_directories():
-    global df_folder, feat_folder
-    df_folder = './data/patient_dataframes_%s' % matrix_type
-    feat_folder = './results/feature_p_values_%s' % matrix_type
-    plot_folder = './results/survival_plots_%s' % matrix_type
-    for folder in [df_folder, feat_folder, plot_folder]:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-def get_col_idx_lst(feature_list, cluster_features):
+def get_col_idx_lst(feature_list, feat_comb):
     '''
-    Given a feature matrix and a feature type, only keep the columns of the
-    matrix that are of that feature type.
+    Given a feature list and list of feature types, return the list of indices
+    of the feature list that match the given feature types (feat_comb).
     '''
-    # TODO: First cluster on medical history, then cluster on current status.
-    feature_dct = {}
-    feature_dct['symptoms'] = read_spreadsheet('./data/cancer_other_info_mr_symp.txt')[1]
-    feature_dct['history'] = read_smoking_history()[1]
-    feature_dct['herbs'] = read_spreadsheet('./data/cancer_other_info_herbmed.txt')[1]
-    feature_dct['drugs'] = read_spreadsheet('./data/cancer_drug_2017_sheet2.txt')[1]
-    feature_dct['tests'] = read_spreadsheet('./data/cancer_check_20170324.txt')[1]
+    fname_dct = ({'symptoms':'cancer_other_info_mr_symp', 'herbs':
+        'cancer_other_info_herbmed', 'drugs':'cancer_drug_2017_sheet2',
+        'tests':'cancer_check_20170324'})
 
     feat_set = set([])
-    for feat_type in cluster_features:
-        feat_set = feat_set.union(feature_dct[feat_type])
+    for feat_type in feat_comb:
+        if feat_type == 'history':
+            curr_features = read_smoking_history()[1]
+        else:
+            curr_features = read_spreadsheet('./data/%s.txt' %
+                fname_dct[feat_type])[1]
+        feat_set = feat_set.union(curr_features)
     # Get column indices of the current feature type.
     col_idx_lst = [i for i, e in enumerate(feature_list) if e in feat_set]
     return col_idx_lst
@@ -77,9 +81,8 @@ def get_cluster_labels(feature_matrix, num_clusters):
     Clusters using K-Means with the given number of clusters on the cityblock
     distance matrix of the given feature matrix.
     '''
-    # TODO: PCA.
+    # TODO: number of PCA components.
     num_comp = int(feature_matrix.shape[1] * 0.2)
-    # num_comp = 50
     pca = PCA(n_components=num_comp)
     distance_matrix = normalize(feature_matrix, norm='l1')
     distance_matrix = pca.fit_transform(distance_matrix)
@@ -89,10 +92,13 @@ def get_cluster_labels(feature_matrix, num_clusters):
     est.fit(distance_matrix)
     return list(est.labels_)
 
-    # distance_matrix = squareform(pdist(feature_matrix, metric='cityblock'))
-    # est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
-    # est.fit(distance_matrix)
-    # return list(est.labels_)
+def get_vkps_labels(base_feature_matrix):
+    '''
+    For VKPS, one cluster of patients with score greater than 60, rest into
+    the other cluster. Return a set of labels. Uses the base feature matrix.
+    '''
+    labels = [1 if kps > 60 else 0 for kps in base_feature_matrix]
+    return labels
 
 def write_clusters(labels, num_clusters, survival_mat, out_name):
     '''
@@ -207,13 +213,13 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         max_mean, merge_len, merge_mean, tag))
     out.close()
 
-def sequential_cluster(cluster_features):
+def sequential_cluster(feat_comb):
     '''
-    First cluster on just symptom features, and then sub-cluster on treatment
+    First split data by cancer subtype, and then sub-cluster on treatment
     features.
     '''
-    if isImpute:
-        suffix = '_' + num_dim
+    if isImpute in ['prosnet', 'mean']:
+        suffix = '_' + opt_arg
     else:
         suffix = ''
 
@@ -225,67 +231,69 @@ def sequential_cluster(cluster_features):
     # First, only cluster on symptoms and tests for sequential clustering.
     labels = get_subtype_labels(survival_mat)
 
-    # Cluster a second time, this time on drugs and herbs.
-    # TODO: Currently initially clustering on medical tests.
-    drug_idx_lst = get_col_idx_lst(feature_list, cluster_features)
-    drug_feature_matrix = feature_matrix[:,drug_idx_lst]
-    # drug_list = [feature_list[i] for i in drug_idx_lst]
+    # Get the sliced feature matrix, depending on the feat_comb.
+    if isImpute == 'vkps': # Use VKPS as the only feature.
+        sub_feature_matrix = base_feature_matrix[:,feature_list.index('VKPS')]
+    else:
+        feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)
+        sub_feature_matrix = feature_matrix[:,feat_idx_lst]
     for i in range(3):
         # These are the indices of the patients in the current cluster.
         clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
         assert len(clus_idx_lst) == labels.count(i)
 
-        sub_labels = get_cluster_labels(drug_feature_matrix[clus_idx_lst], 2)
+        if isImpute == 'vkps':
+            sub_labels = get_vkps_labels(sub_feature_matrix[clus_idx_lst])
+        else:
+            sub_labels = get_cluster_labels(sub_feature_matrix[clus_idx_lst],
+                2)
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
         if isImpute == 'prosnet':
-            sub_df_fname = '%s/prosnet_%d_%s.txt' % (df_folder, i, num_dim)
-            sub_feat_fname = '%s/prosnet_%d_%s.txt' % (feat_folder, i, num_dim)
-        elif isImpute == 'mean':
-            sub_df_fname = '%s/mean_%d.txt' % (df_folder, i)
-            sub_feat_fname = '%s/mean_%d.txt' % (feat_folder, i)
+            sub_df_fname = '%s/prosnet_%d_%s.txt' % (df_folder, i, opt_arg)
+            sub_feat_fname = '%s/prosnet_%d_%s.txt' % (feat_folder, i, opt_arg)
+        elif isImpute in ['mean', 'vkps']:
+            sub_df_fname = '%s/%s_%d.txt' % (df_folder, isImpute, i)
+            sub_feat_fname = '%s/%s_%d.txt' % (feat_folder, isImpute, i)
         else:
             sub_df_fname = '%s/without_prosnet_%d.txt' % (df_folder, i)
             sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
 
         write_clusters(sub_labels, 2, sub_survival_mat, sub_df_fname)
-        # Perform feature analysis on the original feature matrix.
-        # feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst][:,
-        #     drug_idx_lst], drug_list, sub_feat_fname)
+        # Perform feature analysis on all features.
         feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst],
             feature_list, sub_feat_fname)
 
 def main():
-    if len(sys.argv) not in [3, 4]:
-        print ('Usage: python %s matrix_type metric num_dim<optional>' %
+    if len(sys.argv) not in [2, 3]:
+        print ('Usage: python %s metric num_dim/mean/vkps<optional>' %
             sys.argv[0])
         exit()
-    global matrix_type, metric, isImpute
-    matrix_type, metric, isImpute = sys.argv[1], sys.argv[2], False
-    assert matrix_type in ['seq', 'full']
+    global metric, isImpute
+    metric, isImpute = sys.argv[1], False
 
-    # Optional dimensions argument for ProSNet experiments.
-    if len(sys.argv) == 4:
-        global num_dim
-        num_dim = sys.argv[3]
-        if num_dim.isdigit():
+    # Optional dimensions argument for ProSNet experiments or mean imputation.
+    if len(sys.argv) == 3:
+        global opt_arg # This argument is either num_dim, 'mean', or 'vkps'.
+        opt_arg = sys.argv[2]
+        assert opt_arg.isdigit() or opt_arg in ['mean', 'vkps']
+        if opt_arg.isdigit():
             isImpute = 'prosnet'
         else:
-            isImpute = 'mean'
+            isImpute = opt_arg
 
     generate_directories()
 
-    # TODO: Change iterations of features.
+    # TODO: Change types of features.
     # feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
-    # x = itertools.chain.from_iterable(itertools.combinations(feature_list,
-        # r) for r in range(len(feature_list) + 1))
-    x = [['symptoms', 'history']]
-    # x = [['tests', 'symptoms', 'history']]
+    # feat_comb_list = itertools.chain.from_iterable(itertools.combinations(
+    #     feature_list, r) for r in range(len(feature_list) + 1))
+    feat_comb_list = [['symptoms', 'history']]
 
-    for i in x:
-        if i == ():
+    for feat_comb in feat_comb_list:
+        if feat_comb == ():
             continue
-        sequential_cluster(list(i))
+        sequential_cluster(list(feat_comb))
         # Call the R script.
         command = 'Rscript survival_model.R %s' % df_folder
         subprocess.call(command, shell=True)

@@ -28,7 +28,16 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
             for (feature, feature_freq) in feature_dct[inhospital_id]:
                 row[master_feature_list.index(feature)] += feature_freq
         feature_matrix += [row]
-    return np.array(feature_matrix)
+    feature_matrix = np.array(feature_matrix)
+
+    # Remove the bad columns.
+    zero_column_indices = np.where(~feature_matrix.any(axis=0))[0]
+    good_indices = [i for i in range(len(master_feature_list)
+        ) if i not in zero_column_indices]
+    master_feature_list = [e for i, e in enumerate(master_feature_list
+        ) if i in good_indices]
+
+    return feature_matrix[:,good_indices], master_feature_list
 
 def mean_impute_missing_data(feature_matrix):
     '''
@@ -141,8 +150,8 @@ def main():
                 master_feature_list += [feature]
 
     # Create the numpy array, and remove bad columns.
-    feature_matrix = build_feature_matrix(feature_dct_list, master_feature_list,
-        patient_list)
+    feature_matrix, master_feature_list = build_feature_matrix(feature_dct_list,
+        master_feature_list, patient_list)
     # Print the number of 0 values.
     num_zeros = 0.0
     for row in feature_matrix:
@@ -151,17 +160,14 @@ def main():
                 num_zeros += 1
     print 'average number of zeros', num_zeros / float(feature_matrix.shape[0])
     print 'feature matrix shape', feature_matrix.shape
-    print (~feature_matrix.any(axis=0)).any()
-    print np.where(~feature_matrix.any(axis=0))[0]
+
     # Write out to file a unnormalized file.
-    if not isImputation:
-        write_feature_matrix(feature_matrix, master_feature_list, patient_list,
-            survival_dct,
-            './data/feature_matrices/unnormalized_feature_matrix.txt')
+    write_feature_matrix(feature_matrix, master_feature_list, patient_list,
+        survival_dct, './data/feature_matrices/unnormalized_feature_matrix.txt')
 
     # Normalize feature matrix.
     feature_matrix = normalize(feature_matrix, norm='l1')
-    print feature_matrix.shape
+
     # Perform either mean imputation or embedding imputation.
     if isImputation:
         if num_dim == 'mean':
@@ -169,7 +175,7 @@ def main():
         elif num_dim.isdigit():
             feature_matrix = impute_missing_data(feature_matrix,
                 master_feature_list)
-    print feature_matrix.shape
+
     # Write out matrix out to file.
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
         survival_dct)

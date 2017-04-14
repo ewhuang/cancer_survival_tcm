@@ -150,7 +150,6 @@ def read_feature_matrix(suffix=''):
             continue
         # Survival matrix consists of (patient, death, time) tuples.
         survival_matrix += [(line[0], int(line[1]), float(line[2]))]
-        print len(feature_list), len(master_feature_list)
         assert len(feature_list) == len(master_feature_list)
         feature_matrix += [map(float, feature_list)]
     f.close()

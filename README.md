@@ -36,7 +36,7 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     build a feature matrix by using prosnet vector similarity scores.
 
     ```bash
-    python build_patient_feature_matrix.py num_dim<optional>
+    python build_patient_feature_matrix.py num_dim<optional> sim_thresh<optional>
     ```
 
 2.  Results appear in ./results/survival_plots. Incorporates survival_model.R.
@@ -69,7 +69,14 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     list shows the features that are significantly different between the two
     clusters within the sub-cluster.
 
-4.  Sub-typing pipeline. First classify patients into the cancer groups, and then
+4.  Cancer subtyping. First categorize into cancer subtypes, then cluster into
+    two clusters. 
+
+    ```bash
+    python cluster_cancer_subtypes.py braycurtis num_dim<optional>
+    ```
+
+5.  Sub-typing pipeline. First classify patients into the cancer groups, and then
     perform the clustering. Iterates through different similarity score thresholds
     and distance metrics. Holds the dimension constant, must change in file.
 
