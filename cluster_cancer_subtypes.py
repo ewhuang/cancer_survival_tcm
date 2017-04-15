@@ -212,10 +212,11 @@ def sequential_cluster(feat_comb):
             ) if label == i]
         assert len(clus_idx_lst) == subtype_labels.count(i)
 
+        clus_feat_matrix = sub_feature_matrix[clus_idx_lst]
         if isImpute == 'vkps':
-            sub_labels = get_vkps_labels(sub_feature_matrix[clus_idx_lst])
+            sub_labels = get_vkps_labels(clus_feat_matrix)
         else:
-            sub_labels = get_cluster_labels(sub_feature_matrix[clus_idx_lst])
+            sub_labels = get_cluster_labels(clus_feat_matrix)
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
         if isImpute == 'prosnet':
@@ -264,7 +265,7 @@ def main():
     generate_directories()
 
     if isImpute == 'vkps':
-        feat_comb_list = ['none']
+        feat_comb_list = ['VKPS']
     else:
         # If not just VKPS, iterate through all combinations of features.
         feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']

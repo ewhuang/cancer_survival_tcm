@@ -30,7 +30,6 @@ change.files <- function(filename){
     ggsave(filename=paste('./results/survival_plots_seq', substr(filename,
         third_slash, nchar(filename) - 4), '.pdf', sep=''), plot=pl, width=5,
     height=3.3)
-
 }
 
 args <- commandArgs(trailingOnly = TRUE)
