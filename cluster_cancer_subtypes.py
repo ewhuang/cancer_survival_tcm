@@ -33,23 +33,23 @@ def get_subtype_labels(survival_mat):
     patients.
     '''
     # Get the set of squamous and non-squamous patients.
-    non_squamous, squamous = [], []
+    squamous, non_squamous = [], []
     f = open('./data/smoking_history.txt', 'r')
     for line in f:
         inhospital_id = line.rstrip('\n\r').split('\t')[0]
         cancer = line.rstrip('\n\r').split('\t')[9]
-        if '腺癌' in cancer or '大细胞癌' in cancer or '肺泡' in cancer or '乳头状癌' in cancer:
+        if ('腺癌' in cancer or '大细胞癌' in cancer or '肺泡' in cancer or
+            '乳头状癌' in cancer):
             non_squamous += [inhospital_id]
         elif '鳞癌' in cancer:
             squamous += [inhospital_id]
     f.close()
     # Assign labels to patients.
     labels = []
-    for patient_idx, patient_tup in enumerate(survival_mat):
-        inhospital_id, death, time = patient_tup
-        if inhospital_id in non_squamous:
+    for (inhospital_id, death, time) in survival_mat:
+        if inhospital_id in squamous:
             labels += [1]
-        elif inhospital_id in squamous:
+        elif inhospital_id in non_squamous:
             labels += [2]
         else:
             labels += [0]
@@ -60,35 +60,39 @@ def get_col_idx_lst(feature_list, feat_comb):
     Given a feature list and list of feature types, return the list of indices
     of the feature list that match the given feature types (feat_comb).
     '''
+    # Map each feature type to its filename.
     fname_dct = ({'symptoms':'cancer_other_info_mr_symp', 'herbs':
         'cancer_other_info_herbmed', 'drugs':'cancer_drug_2017_sheet2',
         'tests':'cancer_check_20170324'})
-
     feat_set = set([])
     for feat_type in feat_comb:
+        # Get the current feature set.
         if feat_type == 'history':
             curr_features = read_smoking_history()[1]
         else:
             curr_features = read_spreadsheet('./data/%s.txt' %
                 fname_dct[feat_type])[1]
+        # Update the overall feature set.
         feat_set = feat_set.union(curr_features)
-    # Get column indices of the current feature type.
+    # Get the indices of all input feature types.
     col_idx_lst = [i for i, e in enumerate(feature_list) if e in feat_set]
     return col_idx_lst
 
-def get_cluster_labels(feature_matrix, num_clusters):
+def get_cluster_labels(feature_matrix):
     '''
-    Clusters using K-Means with the given number of clusters on the cityblock
-    distance matrix of the given feature matrix.
+    Clusters using K-Means with 2 clusters on the PCA, then distance matrix
+    with the input metric.
     '''
-    # TODO: number of PCA components.
+    # l1-normalize.
+    norm_matrix = normalize(feature_matrix, norm='l1')
+    # Perform PCA.
     num_comp = int(feature_matrix.shape[1] * 0.2)
     pca = PCA(n_components=num_comp)
-    distance_matrix = normalize(feature_matrix, norm='l1')
-    distance_matrix = pca.fit_transform(distance_matrix)
-    distance_matrix = squareform(pdist(distance_matrix, metric))
-
-    est = KMeans(n_clusters=num_clusters, n_init=1000, random_state=930519)
+    pca_matrix = pca.fit_transform(norm_matrix)
+    # Compute distance matrix.
+    distance_matrix = squareform(pdist(pca_matrix, metric))
+    # Always cluster with 2 clusters.
+    est = KMeans(n_clusters=2, n_init=1000, random_state=930519)
     est.fit(distance_matrix)
     return list(est.labels_)
 
@@ -100,18 +104,16 @@ def get_vkps_labels(base_feature_matrix):
     labels = [1 if kps > 60 else 0 for kps in base_feature_matrix]
     return labels
 
-def write_clusters(labels, num_clusters, survival_mat, out_name):
+def write_clusters(labels, survival_mat, out_name):
     '''
     Given the labels, write the clusters out to file. For situations in which
     we only have two clusters, merge the smaller clusters and label it 0.
     '''
     assert len(labels) == len(survival_mat)
-    # First, determine the index of the largest cluster.
+    # First, determine the index of the larger cluster.
     max_clus = Counter(labels).most_common(1)[0][0]
-    if num_clusters in [2, 3]:
-        tag_list = [1 if label == max_clus else 0 for label in labels]
-    else:
-        tag_list = labels[:]
+    # Larger cluster gets label 1.
+    tag_list = [1 if label == max_clus else 0 for label in labels]
 
     out = open(out_name, 'w')
     out.write('death\ttime\tcluster\n')
@@ -120,42 +122,6 @@ def write_clusters(labels, num_clusters, survival_mat, out_name):
         tag = tag_list[patient_idx]
         out.write('%d\t%g\t%d\n' % (death, time, tag))
     out.close()
-
-def get_cluster_symptoms(clus_idx_lst, feature_list, feature_matrix,
-    symp_idx_lst):
-    '''
-    Given a list of patient indices, and a symptom feature matrix, find the
-    symptoms that best characterize the patients.
-    '''
-    symptom_cands = []
-    # Get the rows in the feature matrix belonging to the cluster.
-    cluster_matrix = feature_matrix[clus_idx_lst]
-
-    # Get the matrix of non-cluster patients.
-    non_clus_idx_lst = [i for i in range(len(feature_matrix)
-        ) if i not in clus_idx_lst]
-    non_clus_matrix = feature_matrix[non_clus_idx_lst]
-
-    assert len(clus_idx_lst) + len(non_clus_idx_lst) == len(feature_matrix)
-
-    for symp_idx in symp_idx_lst:
-        clus_col = cluster_matrix[:,symp_idx]
-        non_clus_col = non_clus_matrix[:,symp_idx]
-
-        with np.errstate(invalid='ignore'):
-            t_stat, p_value = ttest_ind(clus_col, non_clus_col)
-
-        if (p_value / 2.0) < 0.1:
-            symptom = feature_list[symp_idx]
-            clus_mean, non_clus_mean = np.mean(clus_col), np.mean(non_clus_col)
-            if clus_mean == non_clus_mean:
-                symptom += '='
-            elif clus_mean > non_clus_mean:
-                symptom += '>'
-            elif clus_mean < non_clus_mean:
-                symptom += '<'
-            symptom_cands += [symptom]
-    return ', '.join(symptom_cands) + '\n'
 
 def feature_analysis(labels, feature_matrix, feature_list, out_name,
     symp_line=''):
@@ -196,6 +162,7 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         if max_mean == merge_mean:
             tag = '='
         elif max_mean > merge_mean:
+            # Larger cluster gets label 1.
             tag = '%d>' % 1
         else:
             tag = '<'
@@ -229,24 +196,26 @@ def sequential_cluster(feat_comb):
     assert base_feat_lst == feature_list and survival_mat == base_surv_mat
 
     # First, only cluster on symptoms and tests for sequential clustering.
-    labels = get_subtype_labels(survival_mat)
+    subtype_labels = get_subtype_labels(survival_mat)
 
     # Get the sliced feature matrix, depending on the feat_comb.
     if isImpute == 'vkps': # Use VKPS as the only feature.
+        # Use the base feature matrix for VKPS, since we're thresholding at 60.
         sub_feature_matrix = base_feature_matrix[:,feature_list.index('VKPS')]
     else:
         feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)
         sub_feature_matrix = feature_matrix[:,feat_idx_lst]
-    for i in range(3):
-        # These are the indices of the patients in the current cluster.
-        clus_idx_lst = [j for j, label in enumerate(labels) if label == i]
-        assert len(clus_idx_lst) == labels.count(i)
+    # Skip the 0th subtype, since it's in the 'other' category.
+    for i in [1, 2]:
+        # These are the indices of the patients with the current subtype.
+        clus_idx_lst = [j for j, label in enumerate(subtype_labels
+            ) if label == i]
+        assert len(clus_idx_lst) == subtype_labels.count(i)
 
         if isImpute == 'vkps':
             sub_labels = get_vkps_labels(sub_feature_matrix[clus_idx_lst])
         else:
-            sub_labels = get_cluster_labels(sub_feature_matrix[clus_idx_lst],
-                2)
+            sub_labels = get_cluster_labels(sub_feature_matrix[clus_idx_lst])
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
         if isImpute == 'prosnet':
@@ -259,21 +228,28 @@ def sequential_cluster(feat_comb):
             sub_df_fname = '%s/without_prosnet_%d.txt' % (df_folder, i)
             sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
 
-        write_clusters(sub_labels, 2, sub_survival_mat, sub_df_fname)
+        write_clusters(sub_labels, sub_survival_mat, sub_df_fname)
         # Perform feature analysis on all features.
         feature_analysis(sub_labels, base_feature_matrix[clus_idx_lst],
             feature_list, sub_feat_fname)
 
+        # Call the R script.
+        command = 'Rscript plot_kaplan_meiers.R %s' % sub_df_fname
+        subprocess.call(command, shell=True)
+
 def main():
-    if len(sys.argv) not in [2, 3]:
-        print ('Usage: python %s metric num_dim/mean/vkps<optional>' %
-            sys.argv[0])
+    if len(sys.argv) not in [2, 3, 4]:
+        print ('Usage: python %s metric num_dim/mean/vkps<optional> '
+            'partial<optional>' % sys.argv[0])
         exit()
     global metric, isImpute
-    metric, isImpute = sys.argv[1], False
+    metric, isImpute, isPartial = sys.argv[1], False, False
 
+    # No imputation with partial features.
+    if 'partial' in sys.argv and len(sys.argv) == 3:
+        isPartial = True
     # Optional dimensions argument for ProSNet experiments or mean imputation.
-    if len(sys.argv) == 3:
+    elif len(sys.argv) >= 3:
         global opt_arg # This argument is either num_dim, 'mean', or 'vkps'.
         opt_arg = sys.argv[2]
         assert opt_arg.isdigit() or opt_arg in ['mean', 'vkps']
@@ -282,21 +258,25 @@ def main():
         else:
             isImpute = opt_arg
 
+    if 'partial' in sys.argv:
+        isPartial = True
+
     generate_directories()
 
-    # TODO: Change types of features.
-    # feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
-    # feat_comb_list = itertools.chain.from_iterable(itertools.combinations(
-    #     feature_list, r) for r in range(len(feature_list) + 1))
-    feat_comb_list = [['symptoms', 'history']]
+    if isImpute == 'vkps':
+        feat_comb_list = ['none']
+    else:
+        # If not just VKPS, iterate through all combinations of features.
+        feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
+        feat_comb_list = itertools.chain.from_iterable(itertools.combinations(
+            feature_list, r) for r in range(len(feature_list) + 1))
+    if isPartial:
+        feat_comb_list = [['symptoms', 'history']]
 
     for feat_comb in feat_comb_list:
         if feat_comb == ():
             continue
         sequential_cluster(list(feat_comb))
-        # Call the R script.
-        command = 'Rscript survival_model.R %s' % df_folder
-        subprocess.call(command, shell=True)
 
 if __name__ == '__main__':
     main()

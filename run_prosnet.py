@@ -120,11 +120,10 @@ def run_prosnet():
     os.chdir('../simons_mouse/Sheng/prosnet/model')
     results_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
     command = ('./embed -node "%s/prosnet_'
-        'node_list.txt" -link "%s/prosnet_edge_list.txt" -output "%s/prosnet_'
-        'node_vectors_%s_dims.vec" -binary 0 -size %s -negative 5 -samples 1 '
+        'node_list.txt" -link "%s/prosnet_edge_list.txt" -binary 0 -size %s -negative 5 -samples 1 '
         '-iters 500 -threads 12 -model 2 -depth 10 -restart 0.8 '
         '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 2' % (
-            results_folder, results_folder, results_folder, num_dim, num_dim,
+            results_folder, results_folder, num_dim,
             num_edge_types))
     print command
     subprocess.call(command, shell=True)

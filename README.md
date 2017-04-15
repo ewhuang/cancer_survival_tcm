@@ -70,10 +70,11 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     clusters within the sub-cluster.
 
 4.  Cancer subtyping. First categorize into cancer subtypes, then cluster into
-    two clusters. 
+    two clusters. 'partial' argument means we only use tests and symptoms in the
+    clustering phase.
 
     ```bash
-    python cluster_cancer_subtypes.py braycurtis num_dim<optional>
+    python cluster_cancer_subtypes.py braycurtis num_dim/mean/vkps<optional> partial<optional>
     ```
 
 5.  Sub-typing pipeline. First classify patients into the cancer groups, and then
@@ -81,7 +82,7 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     and distance metrics. Holds the dimension constant, must change in file.
 
     ```bash
-    python read_subtype_output.py
+    python tune_feature_parameters.py
     ```
     Runs cluster_cancer_subtypes.py internally.
 

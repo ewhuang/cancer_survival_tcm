@@ -60,7 +60,8 @@ def impute_missing_data(feature_matrix, master_feature_list):
         # f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
         #     num_dim, 'r')
         # TODO: iteration number.
-        f = open('../simons_mouse/Sheng/prosnet/model/embed_450.txt', 'r')
+        f = open('../simons_mouse/Sheng/prosnet/model/embed_%s_450.txt' %
+            num_dim, 'r')
         for i, line in enumerate(f):
             if i == 0:
                 continue
@@ -122,6 +123,7 @@ def main():
     if len(sys.argv) > 1:
         global num_dim
         num_dim = sys.argv[1]
+        assert num_dim.isdigit() or num_dim == 'mean'
         isImputation = True
     if len(sys.argv) == 3:
         global sim_thresh
@@ -158,8 +160,8 @@ def main():
         for ele in row:
             if ele == 0:
                 num_zeros += 1
-    print 'average number of zeros', num_zeros / float(feature_matrix.shape[0])
-    print 'feature matrix shape', feature_matrix.shape
+    # print 'average number of zeros', num_zeros / float(feature_matrix.shape[0])
+    # print 'feature matrix shape', feature_matrix.shape
 
     # Write out to file a unnormalized file.
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
