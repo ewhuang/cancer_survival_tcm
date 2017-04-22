@@ -17,11 +17,13 @@ change.files <- function(filename){
     print(pval)
 
     fitMeta <- survfit(Surv(OV$time, OV$death) ~ (OV$cluster))
-    # print(fitMeta, print.rmean=T)
+    print(fitMeta, print.rmean=T)
     third_slash<-which(strsplit(filename, "")[[1]]=="/")[3]
 
-    pl <- ggsurv(fitMeta) + guides(linetype = FALSE) + scale_colour_discrete(
-        name='Cluster Size', labels = fitMeta$n) + labs(x='Time (months)',
+    pl <- ggsurv(fitMeta) + guides(linetype = FALSE) + scale_colour_manual(
+        values=c('0'='#00BFC4', '1'='#F8766D'),
+        name='Cluster Size', labels = c('21','69'), guide=guide_legend(reverse=TRUE)) + labs(x='Time (months)',
+        # name='Cluster Size') + labs(x='Time (months)',
         y='Probability of survival') + theme(aspect.ratio=0.66,
         text=element_text(size=12), legend.justification=c(1,1),
         legend.position=c(1,1), legend.background = element_rect(fill=alpha(

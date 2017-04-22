@@ -39,14 +39,6 @@ def build_feature_matrix(feature_dct_list, master_feature_list, patient_list):
 
     return feature_matrix[:,good_indices], master_feature_list
 
-def mean_impute_missing_data(feature_matrix):
-    '''
-    Given a feature matrix, fill in missing values of each column based on the
-    average of the non-zero values.
-    '''
-    imp = Imputer(missing_values=0, strategy='mean')
-    return imp.fit_transform(feature_matrix)
-
 def impute_missing_data(feature_matrix, master_feature_list):
     '''
     Given the feature matrix and the column labels (master_feature_list), impute
@@ -114,20 +106,17 @@ def write_feature_matrix(feature_matrix, master_feature_list, patient_list,
     out.close()
 
 def main():
-    if len(sys.argv) not in [1, 2, 3]:
+    if len(sys.argv) not in [1, 3]:
         print 'Usage:python %s num_dim<optional> sim_thresh<optional>' % (
             sys.argv[0])
         exit()
     global isImputation
     isImputation = False
-    if len(sys.argv) > 1:
-        global num_dim
-        num_dim = sys.argv[1]
-        assert num_dim.isdigit() or num_dim == 'mean'
-        isImputation = True
     if len(sys.argv) == 3:
-        global sim_thresh
-        sim_thresh = float(sys.argv[2])
+        isImputation = True
+        global num_dim, sim_thresh
+        num_dim, sim_thresh = sys.argv[1], float(sys.argv[2])
+        assert num_dim.isdigit()
 
     survival_dct = read_spreadsheet('./data/cancer_life_days.txt')[0]
     # Initialize our list of inhospital_id's.
@@ -172,15 +161,14 @@ def main():
 
     # Perform either mean imputation or embedding imputation.
     if isImputation:
-        if num_dim == 'mean':
-            feature_matrix = mean_impute_missing_data(feature_matrix)
-        elif num_dim.isdigit():
-            feature_matrix = impute_missing_data(feature_matrix,
-                master_feature_list)
+        feature_matrix = impute_missing_data(feature_matrix,
+            master_feature_list)
 
     # Write out matrix out to file.
     write_feature_matrix(feature_matrix, master_feature_list, patient_list,
         survival_dct)
+
+    print feature_matrix.shape
 
 if __name__ == '__main__':
     main()

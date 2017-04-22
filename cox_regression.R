@@ -2,7 +2,6 @@ library(survival)
 # library(MASS)
 # library(risksetROC)
 library(survAUC)
-library(rms)
 
 defaultEncoding <- "UTF8"
 
@@ -18,17 +17,20 @@ change.files <- function(filename){
     OV<-OV[sample(nrow(OV)),]
     # Create three folds.
     folds <- cut(seq(1,nrow(OV)),breaks=3,labels=FALSE)
-
-    
-
     sum<-0
+
+    res.cox<-coxph(Surv(time, death) ~ . - patient_id - death - time, data=OV)
+    test.ph <- cox.zph(res.cox)
+    print(test.ph)
+    # print(test.ph$table)
+    # print(test.ph[is.element(test.ph$p, NaN)])
+    exit()
 
     for(i in 1:3) {
         # Segment data by fold using which() function.
         testIndices<-which(folds==i,arr.ind=TRUE)
         testData<-OV[testIndices, ]
         trainData<-OV[-testIndices, ]
-
         # Train Cox model.
         train.fit<-coxph(Surv(time, death) ~ . - patient_id - death - time,
             data=trainData, singular.ok=TRUE, na.action=na.omit)
@@ -41,7 +43,9 @@ change.files <- function(filename){
 
         # Compute AUC.
         AUC_hc <- AUC.hc(Surv.rsp, Surv.rsp.new, lpnew, times)
+        print(times)
         sum<-sum + AUC_hc$iauc
+        print(AUC_hc$iauc)
     }
     print(sum / 3.0)
 }

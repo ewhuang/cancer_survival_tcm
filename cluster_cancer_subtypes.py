@@ -12,9 +12,9 @@ import numpy as np
 import operator
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import ttest_ind
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, Imputer
 import subprocess
 import sys
 
@@ -84,7 +84,7 @@ def get_cluster_labels(feature_matrix):
     with the input metric.
     '''
     # l1-normalize.
-    norm_matrix = normalize(feature_matrix, norm='l1')
+    norm_matrix = normalize(feature_matrix, norm='max')
     # Perform PCA.
     num_comp = int(feature_matrix.shape[1] * 0.2)
     pca = PCA(n_components=num_comp)
@@ -93,6 +93,8 @@ def get_cluster_labels(feature_matrix):
     distance_matrix = squareform(pdist(pca_matrix, metric))
     # Always cluster with 2 clusters.
     est = KMeans(n_clusters=2, n_init=1000, random_state=930519)
+    # est = AgglomerativeClustering(n_clusters=2, linkage='average', affinity=
+        # 'cosine')
     est.fit(distance_matrix)
     return list(est.labels_)
 
@@ -113,7 +115,7 @@ def write_clusters(labels, survival_mat, out_name):
     # First, determine the index of the larger cluster.
     max_clus = Counter(labels).most_common(1)[0][0]
     # Larger cluster gets label 1.
-    tag_list = [1 if label == max_clus else 0 for label in labels]
+    tag_list = [0 if label == max_clus else 1 for label in labels]
 
     out = open(out_name, 'w')
     out.write('death\ttime\tcluster\n')
@@ -185,7 +187,8 @@ def sequential_cluster(feat_comb):
     First split data by cancer subtype, and then sub-cluster on treatment
     features.
     '''
-    if isImpute in ['prosnet', 'mean']:
+    # if isImpute in ['prosnet', 'mean']:
+    if isImpute == 'prosnet':
         suffix = '_' + opt_arg
     else:
         suffix = ''
@@ -205,6 +208,16 @@ def sequential_cluster(feat_comb):
     else:
         feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)
         sub_feature_matrix = feature_matrix[:,feat_idx_lst]
+    
+    good_labels = [i for i, e in enumerate(subtype_labels) if e in [1,2]]
+    num_zeros = 0.0
+    for row in feature_matrix[good_labels]:
+        for ele in row:
+            if ele == 0:
+                num_zeros += 1
+    print 'average number of zeros', num_zeros / float(feature_matrix[good_labels].shape[0])
+    print 'feature matrix shape', feature_matrix[good_labels].shape
+    # END TODO.
     # Skip the 0th subtype, since it's in the 'other' category.
     for i in [1, 2]:
         # These are the indices of the patients with the current subtype.
@@ -213,6 +226,9 @@ def sequential_cluster(feat_comb):
         assert len(clus_idx_lst) == subtype_labels.count(i)
 
         clus_feat_matrix = sub_feature_matrix[clus_idx_lst]
+        if isImpute == 'mean':
+            imp = Imputer(missing_values=0, strategy='mean')
+            clus_feat_matrix = imp.fit_transform(clus_feat_matrix)
         if isImpute == 'vkps':
             sub_labels = get_vkps_labels(clus_feat_matrix)
         else:
