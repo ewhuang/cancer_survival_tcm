@@ -18,7 +18,7 @@ Cancer survival models for TCM patients.
     python generate_directories.py
     ```
 
-## Prosnet Data Imputation.
+## HEMnet Data Imputation.
 Convert the HGNC IDs of hit_herb_target relations_zhou.xlsx by going to
 http://www.genenames.org/cgi-bin/download, and then checking only Approved Symbol and Entrez Gene ID, then clicking submit. Save results into ./data/hgnc_to_entrez.txt.
 To get the actual PPI network, download http://www.functionalnet.org/humannet/HumanNet.v1.benchmark.txt. Move to ./data/.
@@ -31,15 +31,43 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     python run_prosnet.py num_dim
     ```
 
-## Clustering patients for survival model
-1.  Build the patient feature matrix. Adding the optional num_dim argument, we
+2.  Build the patient feature matrix. Adding the optional num_dim argument, we
     build a feature matrix by using prosnet vector similarity scores.
 
     ```bash
     python build_patient_feature_matrix.py num_dim<optional> sim_thresh<optional>
     ```
+    
+3.  Cancer subtyping. First categorize into cancer subtypes, then cluster into
+    two clusters. 'partial' argument means we only use tests and symptoms in the
+    clustering phase. Runs plot_kaplan_meiers.R internally.
 
-2.  Results appear in ./results/survival_plots. Incorporates survival_model.R.
+    ```bash
+    python cluster_cancer_subtypes.py cosine num_dim/mean/vkps<optional> partial<optional>
+    ```
+    Example:
+    ```bash
+    python cluster_cancer_subtypes.py cosine 500 partial
+    ```
+
+## Paper scripts.
+
+1.  Sub-typing pipeline. First classify patients into the cancer groups, and then
+    perform the clustering. Iterates through different similarity score thresholds
+    and distance metrics. Holds the dimension constant, must change in file.
+    ```bash
+    python tune_feature_parameters.py
+    ```
+    Runs cluster_cancer_subtypes.py internally.
+
+2.  Plots the dimension tuning effects with pre-entered plotting points.
+
+    ```bash
+    Rscript plot_dimension_sensitivity.R
+    ```
+
+## Extra experimental scripts. Nothing to do with HEMnet.
+1.  Results appear in ./results/survival_plots. Incorporates survival_model.R.
     Using the additional num_dim argument means we are using the prosnet
     feature matrices. 'treatment' argument means we're studying patients with
     and without a treatment given a condition. 'synergy' argument means we're
@@ -54,7 +82,7 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
 
     Best results when using binary features (line 30) and mean threshold (line 70) of build_patient_feature_matrix.py, as well as all prior information in run_prosnet.py
 
-3.  Cluster patients using the command line argument clustering method. Clusters
+2.  Cluster patients using the command line argument clustering method. Clusters
     for both types of feature matrices: with and without Prosnet. Also runs the
     R script for plotting survival curves.
     
@@ -68,23 +96,6 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     whether they were less than or greater than in value, respectively. The
     list shows the features that are significantly different between the two
     clusters within the sub-cluster.
-
-4.  Cancer subtyping. First categorize into cancer subtypes, then cluster into
-    two clusters. 'partial' argument means we only use tests and symptoms in the
-    clustering phase. Runs plot_kaplan_meiers.R internally.
-
-    ```bash
-    python cluster_cancer_subtypes.py braycurtis num_dim/mean/vkps<optional> partial<optional>
-    ```
-
-5.  Sub-typing pipeline. First classify patients into the cancer groups, and then
-    perform the clustering. Iterates through different similarity score thresholds
-    and distance metrics. Holds the dimension constant, must change in file.
-
-    ```bash
-    python tune_feature_parameters.py
-    ```
-    Runs cluster_cancer_subtypes.py internally.
 
 ## Post-experiment analysis
 
@@ -101,12 +112,6 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
 
     ```bash
     python feature_vs_survival_plot.py
-    ```
-
-3.  Plots the dimension tuning effects with pre-entered plotting points.
-
-    ```bash
-    Rscript plot_dimension_sensitivity.R
     ```
 
 ## Script for BIBM special issue BMC topic modeling.

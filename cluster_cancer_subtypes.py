@@ -160,6 +160,7 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
         # > marker means that largest cluster has a larger mean than the
         # combined clusters.
         max_mean, merge_mean = np.mean(max_feat_list), np.mean(merged_feat_list)
+        max_std, merge_std = np.std(max_feat_list), np.std(merged_feat_list)
         # assert len(max_feat_list) > len(merged_feat_list)
         if max_mean == merge_mean:
             tag = '='
@@ -168,18 +169,18 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
             tag = '%d>' % 1
         else:
             tag = '<'
-        p_val_dct[(feature, tag, len(max_feat_list), max_mean,
-            len(merged_feat_list), merge_mean)] = p_value / 2.0
+        p_val_dct[(feature, tag, len(max_feat_list), max_mean, max_std,
+            len(merged_feat_list), merge_mean, merge_std)] = p_value / 2.0
 
     p_val_dct = sorted(p_val_dct.items(), key=operator.itemgetter(1))
 
     # Write out to file.
     out = open(out_name, 'w')
     out.write(symp_line) # Write out the optional symptom line. Sequential only.
-    for ((feature, tag, max_len, max_mean, merge_len, merge_mean),
-        p_value) in p_val_dct:
-        out.write('%s\t%g\t%d\t%g\t%d\t%g\t%s\n' % (feature, p_value, max_len,
-        max_mean, merge_len, merge_mean, tag))
+    for ((feature, tag, max_len, max_mean, max_std, merge_len, merge_mean,
+        merge_std), p_value) in p_val_dct:
+        out.write('%s\t%g\t%d\t%g\t%g\t%d\t%g\t%g\t%s\n' % (feature, p_value,
+            max_len, max_mean, max_std, merge_len, merge_mean, merge_std, tag))
     out.close()
 
 def sequential_cluster(feat_comb):
