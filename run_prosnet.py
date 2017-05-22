@@ -117,8 +117,10 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
     num_edge_types += 1
 
 def run_prosnet():
-    os.chdir('../simons_mouse/Sheng/prosnet/model')
-    results_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
+    # os.chdir('../simons_mouse/Sheng/prosnet/model')
+    os.chdir('./prosnet/model')
+    # results_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
+    results_folder = '../../data/prosnet_data'
     command = ('./embed -node "%s/prosnet_'
         'node_list.txt" -link "%s/prosnet_edge_list.txt" -binary 0 -size %s -negative 5 -samples 1 '
         '-iters 500 -threads 12 -model 2 -depth 10 -restart 0.8 '

@@ -52,8 +52,9 @@ def impute_missing_data(feature_matrix, master_feature_list):
         # f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
         #     num_dim, 'r')
         # TODO: iteration number.
-        f = open('../simons_mouse/Sheng/prosnet/model/embed_%s_450.txt' %
-            num_dim, 'r')
+        # f = open('../simons_mouse/Sheng/prosnet/model/embed_%s_450.txt' %
+        #     num_dim, 'r')
+        f = open('./prosnet/model/embed_%s_450.txt' % num_dim, 'r')
         for i, line in enumerate(f):
             if i == 0:
                 continue
