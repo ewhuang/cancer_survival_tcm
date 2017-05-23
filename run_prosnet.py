@@ -150,13 +150,13 @@ def main():
     node_out = open('%s/prosnet_node_list.txt' % input_folder, 'w')
     edge_out = open('%s/prosnet_edge_list.txt' % input_folder, 'w')
 
-    # # Start off by writing out the protein-herb list and PPI list.
+    # Start off by writing out the protein-herb list and PPI list.
     protein_herb_edge_set = get_protein_herb_edge_set()
     write_files(node_out, edge_out, protein_herb_edge_set, 'p', 'h')
     ppi_edge_set = get_ppi_edge_set()
     write_files(node_out, edge_out, ppi_edge_set, 'p', 'p')
 
-    # # Loop through every pair of node types.
+    # Loop through every pair of node types.
     for i in range(len(f_tuples)):
         node_type_a, fname_a = f_tuples[i]
         patient_dct_a = get_patient_dct(fname_a)
