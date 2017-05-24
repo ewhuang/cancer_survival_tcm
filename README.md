@@ -18,6 +18,13 @@ Cancer survival models for TCM patients.
     python generate_directories.py
     ```
 
+3.  Compiling ProSNet.
+
+    ```bash
+    cd ./prosnet/model
+    make
+    ```
+
 ## HEMnet Data Imputation.
 Convert the HGNC IDs of hit_herb_target relations_zhou.xlsx by going to
 http://www.genenames.org/cgi-bin/download, and then checking only Approved Symbol and Entrez Gene ID, then clicking submit. Save results into ./data/hgnc_to_entrez.txt.
