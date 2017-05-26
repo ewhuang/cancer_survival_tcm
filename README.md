@@ -56,6 +56,7 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ```bash
     python cluster_cancer_subtypes.py cosine 500 partial
     ```
+    In plot_kaplan_meiers.R, change lines 25/27 in order to change the legend labels.
 
 ## Paper scripts.
 

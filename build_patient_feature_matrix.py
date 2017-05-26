@@ -4,9 +4,8 @@
 
 from file_operations import read_spreadsheet, read_smoking_history
 import numpy as np
-from scipy.stats import entropy
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import normalize, Imputer
+from sklearn.preprocessing import normalize
 import sys
 
 # This script creates the feature matrices to get ready for experiments.

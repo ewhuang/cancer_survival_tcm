@@ -21,7 +21,9 @@ change.files <- function(filename){
     third_slash<-which(strsplit(filename, "")[[1]]=="/")[3]
 
     pl <- ggsurv(fitMeta) + guides(linetype = FALSE) + scale_colour_manual(
+        # SWITCH COLORS HERE. CHANGE THEM TO FIT WHAT YOU NEED. TODO.
         values=c('0'='#00BFC4', '1'='#F8766D'),
+        # CHANGE CLUSTER SIZE HERE. TODO.
         name='Cluster Size', labels = c('21','69'), guide=guide_legend(reverse=TRUE)) + labs(x='Time (months)',
         # name='Cluster Size') + labs(x='Time (months)',
         y='Probability of survival') + theme(aspect.ratio=0.66,
