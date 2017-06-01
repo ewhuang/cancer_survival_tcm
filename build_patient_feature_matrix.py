@@ -4,10 +4,19 @@ import argparse
 from file_operations import read_spreadsheet, read_smoking_history
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-# from sklearn.preprocessing import normalize
-# import sys
 
 # This script creates the feature matrix inputs for clustering.
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--num_dim', help='Optional. Number of ProSNet dimensions.')
+    parser.add_argument('-s', '--sim_thresh', help='Optional. Threshold for cosine similarity between ProSNet vectors.')
+    args = parser.parse_args()
+    if args.num_dim == None:
+        assert args.sim_thresh == None
+    else:
+        assert args.num_dim.isdigit() and args.sim_thresh != None
+    return args
 
 def create_dct_lst():
     '''
@@ -71,11 +80,7 @@ def impute_missing_data(feature_matrix, master_feature_lst, num_dim, sim_thresh)
         Reads the output low-dimensional vectors created by prosnet.
         '''
         vector_dct = {}
-        # f = open('./data/prosnet_data/prosnet_node_vectors_%s_dims.vec' %
-        #     num_dim, 'r')
-        # TODO: iteration number.
-        # f = open('../simons_mouse/Sheng/prosnet/model/embed_%s_450.txt' %
-        #     num_dim, 'r')
+        # TODO: Currently taking last iteration number, 450. Can do other files.
         f = open('./data/prosnet_data/embed_%s_450.txt' % num_dim, 'r')
         for i, line in enumerate(f):
             if i == 0:
@@ -92,13 +97,10 @@ def impute_missing_data(feature_matrix, master_feature_lst, num_dim, sim_thresh)
         return np.array(vector_matrix)
 
     vector_matrix = read_prosnet_output(master_feature_lst, num_dim)
-    # TODO: absolute value.
     similarity_matrix = np.abs(cosine_similarity(vector_matrix))
-    # similarity_matrix = cosine_similarity(vector_matrix)
 
     similarity_matrix[similarity_matrix < sim_thresh] = 0
-    # Remove non-diagonal 1s. TODO.
-    # similarity_matrix[similarity_matrix == 1] = 0
+    # Refill diagonals with 1s in cases of rounding errors.
     np.fill_diagonal(similarity_matrix, 1)
 
     # Multiply the feature matrix and the similarity matrix.
@@ -106,8 +108,6 @@ def impute_missing_data(feature_matrix, master_feature_lst, num_dim, sim_thresh)
 
     return enriched_feature_matrix
 
-# def write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
-#     survival_dct, out_fname=''):
 def write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
     survival_dct, fname_suffix):
     '''
@@ -115,12 +115,6 @@ def write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
     column should be inhospital_id's, and the second/third column should be the
     death/time event.
     '''
-    # if out_fname == '':
-    #     results_folder = './data/feature_matrices'
-    #     if isImputation:
-    #         out_fname = '%s/feature_matrix_%s.txt' % (results_folder, num_dim)
-    #     else:
-    #         out_fname = '%s/feature_matrix.txt' % results_folder
     out_fname = './data/feature_matrices/feature_matrix%s.txt' % fname_suffix
     out = open(out_fname, 'w')
     out.write('patient_id\tdeath\ttime\t%s\n' % '\t'.join(master_feature_lst))
@@ -131,84 +125,41 @@ def write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
             map(str, row))))
     out.close()
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--num_dim', help='Number of ProSNet dimensions.')
-    parser.add_argument('-s', '--sim_thresh', help='Threshold for cosine similarity between ProSNet vectors.')
-
-    args = parser.parse_args()
-    if args.num_dim == None:
-        assert args.sim_thresh == None
-    else:
-        assert args.sim_thresh != None
-
-    return args
+def print_sparsity_stats(feature_matrix):
+    '''
+    Prints average number of zero values for each patient.
+    '''
+    num_zeros = np.count_nonzero(feature_matrix==0)
+    print 'average number of zeros:', num_zeros / float(feature_matrix.shape[0])
+    print 'feature matrix shape:', feature_matrix.shape
 
 def main():
-    # if len(sys.argv) not in [1, 3]:
-    #     print 'Usage:python %s num_dim<optional> sim_thresh<optional>' % (
-    #         sys.argv[0])
-    #     exit()
-    # global isImputation
-    # isImputation = False
-
-    # args = parse_args()
-    # # if len(sys.argv) == 3:
-    # if args.num_dim != None:
-    #     # isImputation = True
-    #     global num_dim, sim_thresh
-    #     num_dim, sim_thresh = args.num_dim, float(args.sim_thresh)
-    #     # num_dim, sim_thresh = sys.argv[1], float(sys.argv[2])
-    #     assert num_dim.isdigit()
-
     survival_dct = read_spreadsheet('./data/cancer_life_days.txt')[0]
     # Set keys as a list so it's consistent across dictionary reads.
     patient_list = list(survival_dct.keys())
 
     feature_dct_list, master_feature_lst = create_dct_lst()
 
-    # Create the numpy array, and remove bad columns.
+    # Create the raw matrix, and remove bad columns.
     feature_matrix, master_feature_lst = build_feature_matrix(feature_dct_list,
         master_feature_lst, patient_list)
 
-    # # Print the number of 0 values.
-    # num_zeros = 0.0
-    # for row in feature_matrix:
-    #     for ele in row:
-    #         if ele == 0:
-    #             num_zeros += 1
-    # print 'average number of zeros', num_zeros / float(feature_matrix.shape[0])
-    # print 'feature matrix shape', feature_matrix.shape
-
-    # Write out to file a unnormalized file.
     args = parse_args()
     if args.num_dim == None:
-    # write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
-    #     survival_dct, './data/feature_matrices/unnormalized_feature_matrix.txt')
-        write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
-            survival_dct, '_raw')
-
-    # Normalize feature matrix. Currently not normalizing. Save it for clustering.
-    # feature_matrix = normalize(feature_matrix, norm='l1')
-
-    # Decide whether to perform ProSNet imputation.
-    # if len(sys.argv) == 3:
+        fname_suffix = '_raw'
     else:
-        # isImputation = True
-        # global num_dim, sim_thresh
+        # Get the number of ProSNet dimensions and the cosine similarity threshold.
         num_dim, sim_thresh = args.num_dim, float(args.sim_thresh)
-        # num_dim, sim_thresh = sys.argv[1], float(sys.argv[2])
-        assert num_dim.isdigit()
         feature_matrix = impute_missing_data(feature_matrix, master_feature_lst,
             num_dim, sim_thresh)
         # Add num_dim and sim_thresh to the filename suffix.
         fname_suffix = '_%s_%g' % (num_dim, sim_thresh)
 
-        # Write out matrix out to file.
-        write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
-            survival_dct, fname_suffix)
+    # Write out matrix out to file.
+    write_feature_matrix(feature_matrix, master_feature_lst, patient_list,
+        survival_dct, fname_suffix)
 
-    # print feature_matrix.shape
+    # print_sparsity_stats(feature_matrix)
 
 if __name__ == '__main__':
     main()

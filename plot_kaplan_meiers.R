@@ -12,6 +12,7 @@ change.files <- function(filename){
     nclst <- length(exp$n)
     pval <- (1 - pchisq(exp$chisq, nclst - 1))
 
+    # TODO: print this info.
     print(filename)
     print(exp$chisq)
     print(pval)

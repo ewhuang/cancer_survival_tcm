@@ -3,20 +3,20 @@
 
 ### Author: Edward Huang
 
+import argparse
 from collections import Counter
-from file_operations import read_feature_matrix, read_spreadsheet
-from file_operations import read_smoking_history
+from file_operations import read_feature_matrix, read_spreadsheet, read_smoking_history
 import itertools
 import os
 import numpy as np
 import operator
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import ttest_ind
-from sklearn.cluster import KMeans, AgglomerativeClustering
-from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.preprocessing import normalize, Imputer
 import subprocess
-import sys
+# import sys
 
 def generate_directories():
     global df_folder, feat_folder
@@ -26,6 +26,25 @@ def generate_directories():
     for folder in [df_folder, feat_folder, plot_folder]:
         if not os.path.exists(folder):
             os.makedirs(folder)
+
+def get_feat_combination_list(args):
+    '''
+    Gets the combination of features to be used in the clustering process. Can
+    be full, partial, or just VKPS.
+    '''
+    if args.other_feat == 'vkps':
+        feat_comb_list = ['VKPS']
+    # Current best partial subset of features is symptoms and history.
+    elif args.partial != None:
+        # feat_comb_list = [['drugs']]
+        # feat_comb_list = [['symptoms', 'drugs']]
+        feat_comb_list = [['symptoms', 'history']]
+    else:
+        # If not just VKPS, iterate through all combinations of features.
+        feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
+        feat_comb_list = itertools.chain.from_iterable(itertools.combinations(
+            feature_list, r) for r in range(len(feature_list) + 1))
+    return feat_comb_list
 
 def get_subtype_labels(survival_mat):
     '''
@@ -78,33 +97,40 @@ def get_col_idx_lst(feature_list, feat_comb):
     col_idx_lst = [i for i, e in enumerate(feature_list) if e in feat_set]
     return col_idx_lst
 
-def get_cluster_labels(feature_matrix):
+def get_cluster_labels(feature_matrix, args):
     '''
-    Clusters using K-Means with 2 clusters on the PCA, then distance matrix
-    with the input metric.
+    Clusters using K-Means with 2 clusters on the dimensionality-reduced matrix.
     '''
-    # l1-normalize.
-    norm_matrix = normalize(feature_matrix, norm='max')
+    # BCB paper uses this normalization (by patient).
+    # norm_matrix = normalize(feature_matrix, norm='max') # BCB
+    norm_matrix = normalize(feature_matrix, norm='max', axis=0) # New
+
     # Perform PCA.
-    num_comp = int(feature_matrix.shape[1] * 0.2)
-    pca = PCA(n_components=num_comp)
-    pca_matrix = pca.fit_transform(norm_matrix)
-    # Compute distance matrix.
-    distance_matrix = squareform(pdist(pca_matrix, metric))
+    # BCB paper uses this component number.
+    # num_comp = int(feature_matrix.shape[1] * 0.2) # BCB
+    num_comp = 2 # New
+    # Base matrix, because it's sparse, uses truncated SVD. BCB paper uses PCA only.
+    if args.num_dim == None and args.other_feat == None:
+        svd = TruncatedSVD(n_components=num_comp, random_state=930519) # New
+        decomp_matrix = svd.fit_transform(norm_matrix) # New
+    # Denser matrices with PCA.
+    else:
+        pca = PCA(n_components=num_comp)
+        decomp_matrix = pca.fit_transform(norm_matrix)
+    # BCB runs k-means on the distance matrix.
+    # decomp_matrix = squareform(pdist(decomp_matrix, 'cosine')) # BCB
     # Always cluster with 2 clusters.
     est = KMeans(n_clusters=2, n_init=1000, random_state=930519)
-    # est = AgglomerativeClustering(n_clusters=2, linkage='average', affinity=
-        # 'cosine')
-    est.fit(distance_matrix)
+    est.fit(decomp_matrix)
     return list(est.labels_)
 
-def get_vkps_labels(base_feature_matrix):
-    '''
-    For VKPS, one cluster of patients with score greater than 60, rest into
-    the other cluster. Return a set of labels. Uses the base feature matrix.
-    '''
-    labels = [1 if kps > 60 else 0 for kps in base_feature_matrix]
-    return labels
+# def get_vkps_labels(base_feature_matrix):
+#     '''
+#     For VKPS, one cluster of patients with score greater than 60, rest into
+#     the other cluster. Return a set of labels. Uses the base feature matrix.
+#     '''
+#     labels = 
+#     return labels
 
 def write_clusters(labels, survival_mat, out_name):
     '''
@@ -183,68 +209,77 @@ def feature_analysis(labels, feature_matrix, feature_list, out_name,
             max_len, max_mean, max_std, merge_len, merge_mean, merge_std, tag))
     out.close()
 
-def sequential_cluster(feat_comb):
+def sequential_cluster(feat_comb, args):
     '''
     First split data by cancer subtype, and then sub-cluster on treatment
     features.
     '''
-    # if isImpute in ['prosnet', 'mean']:
-    if isImpute == 'prosnet':
-        suffix = '_' + opt_arg
+    if args.num_dim == None:
+        suffix = '_raw'
     else:
-        suffix = ''
+        assert args.num_dim.isdigit() and args.sim_thresh != None
+        suffix = '_%s_%s' % (args.num_dim, args.sim_thresh)
 
     feature_matrix, feature_list, survival_mat = read_feature_matrix(suffix)
     base_feature_matrix, base_feat_lst, base_surv_mat = read_feature_matrix(
-        'unnormalized')
+        '_raw')
     assert base_feat_lst == feature_list and survival_mat == base_surv_mat
 
     # First, only cluster on symptoms and tests for sequential clustering.
     subtype_labels = get_subtype_labels(survival_mat)
 
     # Get the sliced feature matrix, depending on the feat_comb.
-    if isImpute == 'vkps': # Use VKPS as the only feature.
-        # Use the base feature matrix for VKPS, since we're thresholding at 60.
-        sub_feature_matrix = base_feature_matrix[:,feature_list.index('VKPS')]
+    if feat_comb == 'vkps':
+        feat_idx_lst = feature_list.index('VKPS')
     else:
-        feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)
-        sub_feature_matrix = feature_matrix[:,feat_idx_lst]
+        feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)        
+    sub_feature_matrix = feature_matrix[:,feat_idx_lst]
     
-    good_labels = [i for i, e in enumerate(subtype_labels) if e in [1,2]]
-    num_zeros = 0.0
-    for row in feature_matrix[good_labels]:
-        for ele in row:
-            if ele == 0:
-                num_zeros += 1
-    print 'average number of zeros', num_zeros / float(feature_matrix[good_labels].shape[0])
-    print 'feature matrix shape', feature_matrix[good_labels].shape
-    # END TODO.
+    # good_labels = [i for i, e in enumerate(subtype_labels) if e in [1,2]]
+    # num_zeros = 0.0
+    # for row in feature_matrix[good_labels]:
+    #     for ele in row:
+    #         if ele == 0:
+    #             num_zeros += 1
+    # print 'average number of zeros', num_zeros / float(feature_matrix[good_labels].shape[0])
+    # print 'feature matrix shape', feature_matrix[good_labels].shape
+    # # END TODO.
+
     # Skip the 0th subtype, since it's in the 'other' category.
     for i in [1, 2]:
-        # These are the indices of the patients with the current subtype.
-        clus_idx_lst = [j for j, label in enumerate(subtype_labels
-            ) if label == i]
+        # These are the indices of the patients with the current cancer subtype.
+        clus_idx_lst = [j for j, label in enumerate(subtype_labels) if label == i]
         assert len(clus_idx_lst) == subtype_labels.count(i)
 
         clus_feat_matrix = sub_feature_matrix[clus_idx_lst]
-        if isImpute == 'mean':
+
+        # Use mean imputer according to the other_feat argument.
+        if args.other_feat == 'mean':
             imp = Imputer(missing_values=0, strategy='mean')
             clus_feat_matrix = imp.fit_transform(clus_feat_matrix)
-        if isImpute == 'vkps':
-            sub_labels = get_vkps_labels(clus_feat_matrix)
+
+        if args.other_feat == 'vkps':
+            # sub_labels = get_vkps_labels(clus_feat_matrix)
+            # One cluster of patients with cluster > 60, rest into the other.
+            sub_labels = [1 if kps > 60 else 0 for kps in clus_feat_matrix]
         else:
-            sub_labels = get_cluster_labels(clus_feat_matrix)
+            sub_labels = get_cluster_labels(clus_feat_matrix, args)
         sub_survival_mat = [survival_mat[j] for j in clus_idx_lst]
         # Handling different dataframe filenames.
-        if isImpute == 'prosnet':
-            sub_df_fname = '%s/prosnet_%d_%s.txt' % (df_folder, i, opt_arg)
-            sub_feat_fname = '%s/prosnet_%d_%s.txt' % (feat_folder, i, opt_arg)
-        elif isImpute in ['mean', 'vkps']:
-            sub_df_fname = '%s/%s_%d.txt' % (df_folder, isImpute, i)
-            sub_feat_fname = '%s/%s_%d.txt' % (feat_folder, isImpute, i)
+        if args.num_dim != None:
+            # sub_df_fname = '%s/prosnet_%d_%s_%s.txt' % (df_folder, i, args.num_dim, args.sim_thresh)
+            # sub_feat_fname = '%s/prosnet_%d_%s_%s.txt' % (feat_folder, i, args.num_dim, args.sim_thresh)
+            base_fname = 'prosnet_%s_%s' % (args.num_dim, args.sim_thresh)
+        elif args.other_feat in ['mean', 'vkps']:
+            base_fname = args.other_feat
+            # sub_df_fname = '%s/%s_%d.txt' % (df_folder, args.other_feat, i)
+            # sub_feat_fname = '%s/%s_%d.txt' % (feat_folder, args.other_feat, i)
         else:
-            sub_df_fname = '%s/without_prosnet_%d.txt' % (df_folder, i)
-            sub_feat_fname = '%s/without_prosnet_%d.txt' % (feat_folder, i)
+            # sub_df_fname = '%s/raw_%d.txt' % (df_folder, i)
+            # sub_feat_fname = '%s/raw_%d.txt' % (feat_folder, i)
+            base_fname = 'raw'
+        sub_df_fname = '%s/%s_%d.txt' % (df_folder, base_fname, i)
+        sub_feat_fname = '%s/%s_%d.txt' % (feat_folder, base_fname, i)
 
         write_clusters(sub_labels, sub_survival_mat, sub_df_fname)
         # Perform feature analysis on all features.
@@ -255,46 +290,33 @@ def sequential_cluster(feat_comb):
         command = 'Rscript plot_kaplan_meiers.R %s' % sub_df_fname
         subprocess.call(command, shell=True)
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--num_dim', help='Optional. Number of ProSNet dimensions.')
+    parser.add_argument('-s', '--sim_thresh', help='Optional. Threshold for cosine similarity between ProSNet vectors. Required if --d is present.')
+    parser.add_argument('-o', '--other_feat', help='Optional. Either "mean" or "vkps". Cannot exist if -d exists.')
+    parser.add_argument('-p', '--partial', help='Optional. Whether or not to use a subset of all features.')
+    args = parser.parse_args()
+    if args.num_dim != None:
+        assert args.other_feat == None
+        assert args.num_dim.isdigit() and args.sim_thresh != None
+    elif args.other_feat != None:
+        assert args.num_dim == None
+        assert args.other_feat in ['mean', 'vkps']
+        if args.other_feat == 'vkps':
+            assert args.partial == None
+    return args
+
 def main():
-    if len(sys.argv) not in [2, 3, 4]:
-        print ('Usage: python %s metric num_dim/mean/vkps<optional> '
-            'partial<optional>' % sys.argv[0])
-        exit()
-    global metric, isImpute
-    metric, isImpute, isPartial = sys.argv[1], False, False
-
-    # No imputation with partial features.
-    if 'partial' in sys.argv and len(sys.argv) == 3:
-        isPartial = True
-    # Optional dimensions argument for ProSNet experiments or mean imputation.
-    elif len(sys.argv) >= 3:
-        global opt_arg # This argument is either num_dim, 'mean', or 'vkps'.
-        opt_arg = sys.argv[2]
-        assert opt_arg.isdigit() or opt_arg in ['mean', 'vkps']
-        if opt_arg.isdigit():
-            isImpute = 'prosnet'
-        else:
-            isImpute = opt_arg
-
-    if 'partial' in sys.argv:
-        isPartial = True
-
     generate_directories()
+    args = parse_args()
 
-    if isImpute == 'vkps':
-        feat_comb_list = ['VKPS']
-    else:
-        # If not just VKPS, iterate through all combinations of features.
-        feature_list = ['tests', 'symptoms', 'herbs', 'drugs', 'history']
-        feat_comb_list = itertools.chain.from_iterable(itertools.combinations(
-            feature_list, r) for r in range(len(feature_list) + 1))
-    if isPartial:
-        feat_comb_list = [['symptoms', 'history']]
+    feat_comb_list = get_feat_combination_list(args)
 
     for feat_comb in feat_comb_list:
         if feat_comb == ():
             continue
-        sequential_cluster(list(feat_comb))
+        sequential_cluster(list(feat_comb), args)
 
 if __name__ == '__main__':
     main()

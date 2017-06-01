@@ -127,20 +127,14 @@ def read_spreadsheet(fname):
     f.close()
     return feature_dct, unique_feature_list
 
-# subcategorize_patients.py
-# def read_feature_matrix(fname):
-def read_feature_matrix(suffix=''):
+# cluster_cancer_subtypes.py
+def read_feature_matrix(suffix):
     '''
     Reads the feature matrix of the patient data. Takes an optional argument in
     the form of '_50'.
     '''
     feature_matrix, master_feature_list, survival_matrix = [], [], []
-    # Process the filename.
-    if suffix == 'unnormalized':
-        fname = './data/feature_matrices/unnormalized_feature_matrix.txt'
-    else:
-        fname = './data/feature_matrices/feature_matrix%s.txt' % suffix
-
+    fname = './data/feature_matrices/feature_matrix%s.txt' % suffix
     f = open(fname, 'r')
     for i, line in enumerate(f):
         line = line.strip().split('\t')

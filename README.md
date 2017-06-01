@@ -38,11 +38,20 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     python run_prosnet.py num_dim
     ```
 
-2.  Build the patient feature matrix. Adding the optional num_dim argument, we
-    build a feature matrix by using prosnet vector similarity scores.
+2.  Build the patient feature matrix. -d and -s arguments optional, only for
+    ProSNet enrichment.
 
     ```bash
-    python build_patient_feature_matrix.py num_dim<optional> sim_thresh<optional>
+    python build_patient_feature_matrix.py [-h] [-d NUM_DIM] [-s SIM_THRESH]
+    ```
+
+    Best run:
+    ```bash
+    python build_patient_feature_matrix.py -d 500 -s 0.3
+    ```
+    No arguments creates ./data/feature_matrices/feature_matrix_raw.txt
+    ```bash
+    python build_patient_feature_matrix.py
     ```
     
 3.  Cancer subtyping. First categorize into cancer subtypes, then cluster into
@@ -50,11 +59,12 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     clustering phase. Runs plot_kaplan_meiers.R internally.
 
     ```bash
-    python cluster_cancer_subtypes.py cosine num_dim/mean/vkps<optional> partial<optional>
+    python cluster_cancer_subtypes.py [-h] [-d NUM_DIM] [-s SIM_THRESH] [-o OTHER_FEAT] [-p PARTIAL]
     ```
-    Example:
+
+    Best run:
     ```bash
-    python cluster_cancer_subtypes.py cosine 500 partial
+    python cluster_cancer_subtypes.py -d 500 -s 0.3 -p 1
     ```
     In plot_kaplan_meiers.R, change lines 25/27 in order to change the legend labels.
 
