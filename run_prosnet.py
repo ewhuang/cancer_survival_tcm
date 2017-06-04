@@ -3,6 +3,7 @@
 
 ### Author: Edward Huang
 
+import argparse
 import file_operations
 import os
 import subprocess
@@ -116,7 +117,7 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
         edge_out.write('1\t%s\n' % edge_label)
     num_edge_types += 1
 
-def run_prosnet():
+def run_prosnet(args):
     # os.chdir('../simons_mouse/Sheng/prosnet/model')
     os.chdir('./prosnet/model')
     # network_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
@@ -125,23 +126,38 @@ def run_prosnet():
         'node_list.txt" -link "%s/prosnet_edge_list.txt" -binary 0 -size %s -negative 5 -samples 1 '
         '-iters 500 -threads 12 -model 2 -depth 10 -restart 0.8 '
         '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 2' % (
-            network_folder, network_folder, num_dim, num_edge_types))
+            network_folder, network_folder, args.num_dim, num_edge_types))
     print command
     subprocess.call(command, shell=True)
+    # Rename the resulting file, depending on whether we exclude treatments.
+    if args.excl_treat == None:
+        out_fname = '%s/embed_%s_450_treatments.txt' % (network_folder, args.num_dim)
+    else:
+        out_fname = '%s/embed_%s_450_no_treatments.txt' % (network_folder, args.num_dim)
+    os.rename('%s/embed_%s_450.txt' % (network_folder, args.num_dim), out_fname)
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--num_dim', help='number of ProSNet dimensions')
+    parser.add_argument('-e', '--excl_treat', help='whether to exclude treatments (drugs and herbs)')
+    return parser.parse_args()
 
 def main():
-    if len(sys.argv) != 2:
-        print 'Usage:python %s num_dim' % sys.argv[0]
-        exit()
-    global num_dim
-    num_dim = sys.argv[1]
-    assert num_dim.isdigit()
+    # if len(sys.argv) != 2:
+    #     print 'Usage:python %s num_dim' % sys.argv[0]
+    #     exit()
+    # global num_dim
+    # num_dim = sys.argv[1]
+    # assert num_dim.isdigit()
+    args = parse_args()
 
     # Symptom file must always come before herb file here.
-    f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h',
-        'cancer_other_info_herbmed'), ('n', 'cancer_syndrome_syndromes'
-        ), ('d', 'cancer_drug_2017_sheet2'), ('t', 'cancer_check_20170324'),
+    f_tuples = [('m', 'cancer_other_info_mr_symp'), ('n',
+        'cancer_syndrome_syndromes'), ('t', 'cancer_check_20170324'),
         ('v', 'smoking_history')]
+    if args.excl_treat == None:
+        f_tuples += [('h', 'cancer_other_info_herbmed'), ('d',
+            'cancer_drug_2017_sheet2')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
@@ -177,7 +193,7 @@ def main():
     node_out.close()
 
     # Run prosnet. Outputs the low-dimensional vectors into files.
-    run_prosnet()
+    run_prosnet(args)
 
 if __name__ == '__main__':
     start_time = time.time()
