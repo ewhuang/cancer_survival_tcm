@@ -35,7 +35,7 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     ./data/herb_protein_relations.txt.
 
     ```bash
-    python run_prosnet.py num_dim
+    python run_prosnet.py [-h] [-d NUM_DIM] [-e EXCL_TREAT]
     ```
 
 2.  Build the patient feature matrix. -d and -s arguments optional, only for
@@ -45,12 +45,9 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     python build_patient_feature_matrix.py [-h] [-d NUM_DIM] [-s SIM_THRESH]
     ```
 
-    Best run:
+    Paper results:
     ```bash
     python build_patient_feature_matrix.py -d 500 -s 0.3
-    ```
-    No arguments creates ./data/feature_matrices/feature_matrix_raw.txt
-    ```bash
     python build_patient_feature_matrix.py
     ```
     
@@ -62,9 +59,11 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
     python cluster_cancer_subtypes.py [-h] [-d NUM_DIM] [-s SIM_THRESH] [-o OTHER_FEAT] [-p PARTIAL]
     ```
 
-    Best run:
+    Paper results:
     ```bash
     python cluster_cancer_subtypes.py -d 500 -s 0.3 -p 1
+    python cluster_cancer_subtypes.py -p 1
+    python cluster_cancer_subtypes.py -o mean -p 1
     ```
     In plot_kaplan_meiers.R, change lines 25/27 in order to change the legend labels.
 
@@ -137,4 +136,12 @@ To get the actual PPI network, download http://www.functionalnet.org/humannet/Hu
 1.  Generates a file with only patient syndromes, symptoms, and herbs.
     ```bash
     python bmc_preprocess.py
+    ```
+
+2.  For each marker (symptom, syndrome, medical test), separates patients into
+    clusters based on whether they have this marker in their EMR. Then, output
+    the most discriminative markers into two files, one for each cancer subtype.
+
+    ```bash
+    python get_top_markers.py
     ```

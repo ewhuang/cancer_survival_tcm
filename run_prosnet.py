@@ -102,6 +102,7 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
         if edge in global_edge_set or edge[::-1] in global_edge_set:
             continue
         global_edge_set.add(edge)
+        global_edge_set.add(edge[::-1])
 
         # Write out the edge.
         for i, node in enumerate(edge):
@@ -111,10 +112,11 @@ def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
                 node_out.write('%s\t%s\n' % (node, node_type_tup[i]))
             # Write out the edge.
             edge_out.write('%s\t' % node)
-        # Edge weights are all = 1. Map the edge type to a letter. TODO.
+        # Edge weights are all = 1. Map the edge type to a letter.
         edge_label = string.ascii_lowercase[num_edge_types]
-        # edge_label = num_edge_types + 1
         edge_out.write('1\t%s\n' % edge_label)
+        # Write the edge backwards, to make it undirected.
+        edge_out.write('%s\t%s\t1\t%s\n' % (edge[1], edge[0], edge_label))
     num_edge_types += 1
 
 def run_prosnet(args):
@@ -122,19 +124,19 @@ def run_prosnet(args):
     os.chdir('./prosnet/model')
     # network_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
     network_folder = '../../data/prosnet_data'
-    command = ('./embed -node "%s/prosnet_'
-        'node_list.txt" -link "%s/prosnet_edge_list.txt" -binary 0 -size %s -negative 5 -samples 1 '
-        '-iters 500 -threads 12 -model 2 -depth 10 -restart 0.8 '
+    command = ('./embed -node %s/prosnet_node_list.txt -link '
+        '%s/prosnet_edge_list.txt -binary 0 -size %s -negative 5 -samples 1 '
+        '-iters 501 -threads 12 -model 2 -depth 10 -restart 0.8 '
         '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 2' % (
             network_folder, network_folder, args.num_dim, num_edge_types))
     print command
     subprocess.call(command, shell=True)
     # Rename the resulting file, depending on whether we exclude treatments.
-    if args.excl_treat == None:
-        out_fname = '%s/embed_%s_450_treatments.txt' % (network_folder, args.num_dim)
-    else:
-        out_fname = '%s/embed_%s_450_no_treatments.txt' % (network_folder, args.num_dim)
-    os.rename('%s/embed_%s_450.txt' % (network_folder, args.num_dim), out_fname)
+    # if args.excl_treat == None:
+    #     out_fname = '%s/embed_%s_450_treatments.txt' % (network_folder, args.num_dim)
+    # else:
+    #     out_fname = '%s/embed_%s_450_no_treatments.txt' % (network_folder, args.num_dim)
+    # os.rename('%s/embed_%s_450.txt' % (network_folder, args.num_dim), out_fname)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -152,12 +154,13 @@ def main():
     args = parse_args()
 
     # Symptom file must always come before herb file here.
-    f_tuples = [('m', 'cancer_other_info_mr_symp'), ('n',
-        'cancer_syndrome_syndromes'), ('t', 'cancer_check_20170324'),
-        ('v', 'smoking_history')]
+    f_tuples = [('m', 'cancer_other_info_mr_symp')]
     if args.excl_treat == None:
-        f_tuples += [('h', 'cancer_other_info_herbmed'), ('d',
-            'cancer_drug_2017_sheet2')]
+        f_tuples += [('h', 'cancer_other_info_herbmed')]
+    f_tuples += [('n', 'cancer_syndrome_syndromes')]
+    if args.excl_treat == None:
+        f_tuples += [('d', 'cancer_drug_2017_sheet2')]
+    f_tuples += [('t', 'cancer_check_20170324'), ('v', 'smoking_history')]
 
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
@@ -183,8 +186,7 @@ def main():
 
             # # symptom-herb edges should add the medical textbook's edges.
             if 'symp' in fname_a and 'herb' in fname_b:
-                edge_set = edge_set.union(
-                    file_operations.get_dictionary_symptom_herb_set())
+                edge_set = edge_set.union(file_operations.get_dictionary_symptom_herb_set())
 
             # Write the edges out to file.
             write_files(node_out, edge_out, edge_set, node_type_a, node_type_b)

@@ -33,7 +33,7 @@ def get_feat_combination_list(args):
     be full, partial, or just VKPS.
     '''
     if args.other_feat == 'vkps':
-        feat_comb_list = ['VKPS']
+        feat_comb_list = [['VKPS']]
     # Current best partial subset of features is symptoms and history.
     elif args.partial != None:
         # feat_comb_list = [['drugs']]
@@ -102,23 +102,23 @@ def get_cluster_labels(feature_matrix, args):
     Clusters using K-Means with 2 clusters on the dimensionality-reduced matrix.
     '''
     # BCB paper uses this normalization (by patient).
-    # norm_matrix = normalize(feature_matrix, norm='max') # BCB
-    norm_matrix = normalize(feature_matrix, norm='max', axis=0) # New
+    norm_matrix = normalize(feature_matrix, norm='max') # BCB
+    # norm_matrix = normalize(feature_matrix, norm='max', axis=0) # New
 
     # Perform PCA.
     # BCB paper uses this component number.
-    # num_comp = int(feature_matrix.shape[1] * 0.2) # BCB
-    num_comp = 2 # New
+    num_comp = int(feature_matrix.shape[1] * 0.2) # BCB
+    # num_comp = 2 # New
     # Base matrix, because it's sparse, uses truncated SVD. BCB paper uses PCA only.
-    if args.num_dim == None and args.other_feat == None:
-        svd = TruncatedSVD(n_components=num_comp, random_state=930519) # New
-        decomp_matrix = svd.fit_transform(norm_matrix) # New
-    # Denser matrices with PCA.
-    else:
-        pca = PCA(n_components=num_comp)
-        decomp_matrix = pca.fit_transform(norm_matrix)
+    # if args.num_dim == None and args.other_feat == None:
+    #     svd = TruncatedSVD(n_components=num_comp, random_state=930519) # New
+    #     decomp_matrix = svd.fit_transform(norm_matrix) # New
+    # # Denser matrices with PCA.
+    # else:
+    pca = PCA(n_components=num_comp)
+    decomp_matrix = pca.fit_transform(norm_matrix)
     # BCB runs k-means on the distance matrix.
-    # decomp_matrix = squareform(pdist(decomp_matrix, 'cosine')) # BCB
+    decomp_matrix = squareform(pdist(decomp_matrix, 'cosine')) # BCB
     # Always cluster with 2 clusters.
     est = KMeans(n_clusters=2, n_init=1000, random_state=930519)
     est.fit(decomp_matrix)
@@ -229,10 +229,10 @@ def sequential_cluster(feat_comb, args):
     subtype_labels = get_subtype_labels(survival_mat)
 
     # Get the sliced feature matrix, depending on the feat_comb.
-    if feat_comb == 'vkps':
-        feat_idx_lst = feature_list.index('VKPS')
+    if feat_comb == ['VKPS']:
+        feat_idx_lst = [feature_list.index('VKPS')]
     else:
-        feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)        
+        feat_idx_lst = get_col_idx_lst(feature_list, feat_comb)
     sub_feature_matrix = feature_matrix[:,feat_idx_lst]
     
     # good_labels = [i for i, e in enumerate(subtype_labels) if e in [1,2]]
