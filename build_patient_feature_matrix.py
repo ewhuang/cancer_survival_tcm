@@ -80,8 +80,8 @@ def impute_missing_data(feature_matrix, master_feature_lst, num_dim, sim_thresh)
         Reads the output low-dimensional vectors created by prosnet.
         '''
         vector_dct = {}
-        # TODO: Currently taking last iteration number, 450. Can do other files.
-        f = open('./data/prosnet_data/embed_%s_450.txt' % num_dim, 'r')
+        # TODO: Currently taking last iteration number, 500. Can do other files.
+        f = open('./data/prosnet_data/prosnet_vectors_%s_500' % num_dim, 'r')
         for i, line in enumerate(f):
             if i == 0:
                 continue
@@ -102,7 +102,8 @@ def impute_missing_data(feature_matrix, master_feature_lst, num_dim, sim_thresh)
     similarity_matrix[similarity_matrix < sim_thresh] = 0
     # Refill diagonals with 1s in cases of rounding errors.
     np.fill_diagonal(similarity_matrix, 1)
-
+    print similarity_matrix # TODO
+    print np.array_equal(similarity_matrix, np.identity(len(similarity_matrix)))
     # Multiply the feature matrix and the similarity matrix.
     enriched_feature_matrix = np.dot(feature_matrix, similarity_matrix)
 

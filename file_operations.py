@@ -157,9 +157,8 @@ def get_dictionary_symptom_herb_set():
     symptom_herb_set = set([])
 
     f = open('./data/herb_symptom_dictionary.txt', 'r')
-    for i, line in enumerate(f):
-        if i == 0:
-            continue
+    f.readline() # Skip header line.
+    for line in f:
         line = line.strip().split('\t')
 
         line_length = len(line)

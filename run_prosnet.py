@@ -8,8 +8,6 @@ import file_operations
 import os
 import subprocess
 import string
-import sys
-import time
 
 ### This script prepares the input files for Prosnet. Nodes need to be in a
 ### separate file.
@@ -27,9 +25,14 @@ def get_protein_herb_edge_set():
         line = line.strip().split('\t')
         if len(line) < 3:
             continue
+        # Format: Scientific name, Chinese name, list of proteins.
         herb, protein_list = line[1], line[2:]
-        if '茖葱' in herb: # Special case of alternate naming in the file.
-            herb = '茖葱'
+        # Remove non-Chinese characters from the string.
+        herb = [c for c in herb.decode('utf-8') if u'\u4e00' <= c <= u'\u9fff']        
+        herb = ''.join(herb).encode('utf-8')
+        # Check that the string is all in Chinese.
+        assert all(u'\u4e00' <= c <= u'\u9fff' for c in herb.decode('utf-8'))
+        # Add the protein-herb edge.
         for protein in protein_list:
             protein_herb_edge_set.add((protein, herb))
     f.close()
@@ -52,8 +55,7 @@ def get_ppi_edge_set():
         if node_a not in entrez_to_hgnc_dct or node_b not in entrez_to_hgnc_dct:
             continue
         # Translate the Entrez ID to HGNC protein.
-        ppi_edge_set.add((entrez_to_hgnc_dct[node_a],
-            entrez_to_hgnc_dct[node_b]))
+        ppi_edge_set.add((entrez_to_hgnc_dct[node_a], entrez_to_hgnc_dct[node_b]))
     f.close()
     return ppi_edge_set
 
@@ -82,55 +84,53 @@ def get_coocc_edge_set(patient_dct_a, patient_dct_b):
     for inhospital_id in patient_set:
         for (node_a, node_a_freq) in patient_dct_a[inhospital_id]:
             for (node_b, node_b_freq) in patient_dct_b[inhospital_id]:
-                # We skip self edges, but keep other same-type edges. TODO.
+                # We skip self edges, but keep other same-type edges.
                 if node_a != node_b:
                     coocc_edge_set.add((node_a, node_b))
     return coocc_edge_set
 
-def write_files(node_out, edge_out, edge_set, node_type_a, node_type_b):
+# def write_edges(node_out, edge_out, edge_set, node_type_a, node_type_b):
+def write_edges(edge_out, edge_set, node_type_tup):
     '''
     Write the edges out to file. edge_label is just a letter to differentiate
     amongst the different types of edges. We write nodes out as integers, so
     map_out contains a word on each line corresponding to these integers.
     '''
     global global_node_set, global_edge_set, num_edge_types
-    # The order of node type a, b must match the edge order in edge_set.
-    node_type_tup = (node_type_a, node_type_b)
 
     for edge in edge_set:
         # Check if edge has already been written.
         if edge in global_edge_set or edge[::-1] in global_edge_set:
             continue
         global_edge_set.add(edge)
-        global_edge_set.add(edge[::-1])
 
         # Write out the edge.
-        for i, node in enumerate(edge):
-            # Write out the node if it hasn't appeared yet.
-            if node not in global_node_set:
-                global_node_set.add(node)
-                node_out.write('%s\t%s\n' % (node, node_type_tup[i]))
-            # Write out the edge.
-            edge_out.write('%s\t' % node)
-        # Edge weights are all = 1. Map the edge type to a letter.
         edge_label = string.ascii_lowercase[num_edge_types]
-        edge_out.write('1\t%s\n' % edge_label)
-        # Write the edge backwards, to make it undirected.
-        edge_out.write('%s\t%s\t1\t%s\n' % (edge[1], edge[0], edge_label))
-    num_edge_types += 1
+        for i in range(2):
+            global_node_set.add((edge[i], 'b')) # TODO
+            # global_node_set.add((edge[i], node_type_tup[i]))
+            edge_out.write('%s\t%s\t1\t%s\n' % (edge[i], edge[1 - i], edge_label))
+    # num_edge_types += 1 # TODO: uncomment.
 
-def run_prosnet(args):
-    # os.chdir('../simons_mouse/Sheng/prosnet/model')
-    os.chdir('./prosnet/model')
-    # network_folder = '../../../../cancer_survival_tcm/data/prosnet_data'
-    network_folder = '../../data/prosnet_data'
+def write_nodes():
+    node_out = open('./data/prosnet_data/prosnet_node_list.txt', 'w')
+    for node_pair in global_node_set:
+        node_out.write('%s\t%s\n' % node_pair)
+    node_out.close()
+
+def run_prosnet():
+    os.chdir('../prosnet')
+    network_folder = '../cancer_survival_tcm/data/prosnet_data'
+
     command = ('./embed -node %s/prosnet_node_list.txt -link '
-        '%s/prosnet_edge_list.txt -binary 0 -size %s -negative 5 -samples 1 '
+        '%s/prosnet_edge_list.txt -meta_path %s/meta.txt -output %s/prosnet_vectors_%s -binary 0 -size %s -negative 5 -samples 1 '
         '-iters 501 -threads 12 -model 2 -depth 10 -restart 0.8 '
-        '-edge_type_num %d -rwr_ppi 1 -rwr_seq 1 -train_mode 2' % (
-            network_folder, network_folder, args.num_dim, num_edge_types))
+        '-edge_type_num %d -train_mode 2' % (
+            network_folder, network_folder, network_folder, network_folder,
+            args.num_dim, args.num_dim, num_edge_types + 1))
     print command
     subprocess.call(command, shell=True)
+
     # Rename the resulting file, depending on whether we exclude treatments.
     # if args.excl_treat == None:
     #     out_fname = '%s/embed_%s_450_treatments.txt' % (network_folder, args.num_dim)
@@ -139,40 +139,36 @@ def run_prosnet(args):
     # os.rename('%s/embed_%s_450.txt' % (network_folder, args.num_dim), out_fname)
 
 def parse_args():
+    global args
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--num_dim', help='number of ProSNet dimensions')
+    parser.add_argument('-d', '--num_dim', help='number of ProSNet dimensions',
+        required=True, type=int)
     parser.add_argument('-e', '--excl_treat', help='whether to exclude treatments (drugs and herbs)')
-    return parser.parse_args()
+    args = parser.parse_args()
 
 def main():
-    # if len(sys.argv) != 2:
-    #     print 'Usage:python %s num_dim' % sys.argv[0]
-    #     exit()
-    # global num_dim
-    # num_dim = sys.argv[1]
-    # assert num_dim.isdigit()
-    args = parse_args()
+    parse_args()
 
     # Symptom file must always come before herb file here.
-    f_tuples = [('m', 'cancer_other_info_mr_symp')]
-    if args.excl_treat == None:
-        f_tuples += [('h', 'cancer_other_info_herbmed')]
-    f_tuples += [('n', 'cancer_syndrome_syndromes')]
-    if args.excl_treat == None:
-        f_tuples += [('d', 'cancer_drug_2017_sheet2')]
-    f_tuples += [('t', 'cancer_check_20170324'), ('v', 'smoking_history')]
+    f_tuples = [('m', 'cancer_other_info_mr_symp'), ('h', 'cancer_other_info_herbmed'),
+        ('n', 'cancer_syndrome_syndromes'), ('d', 'cancer_drug_2017_sheet2'),
+        ('t', 'cancer_check_20170324'), ('v', 'smoking_history')]
+    # Exclude treatments if excl_treat is not None.
+    if args.excl_treat != None:
+        f_tuples = [tup for tup in f_tuples if tup[0] not in ['h', 'd']]
 
+    # Create the folder and files for the ProSNet input network.
     input_folder = './data/prosnet_data'
     if not os.path.exists(input_folder):
         os.makedirs(input_folder)
-    node_out = open('%s/prosnet_node_list.txt' % input_folder, 'w')
+    # node_out = open('%s/prosnet_node_list.txt' % input_folder, 'w')
     edge_out = open('%s/prosnet_edge_list.txt' % input_folder, 'w')
 
     # Start off by writing out the protein-herb list and PPI list.
     protein_herb_edge_set = get_protein_herb_edge_set()
-    write_files(node_out, edge_out, protein_herb_edge_set, 'p', 'h')
+    write_edges(edge_out, protein_herb_edge_set, ('p', 'h'))
     ppi_edge_set = get_ppi_edge_set()
-    write_files(node_out, edge_out, ppi_edge_set, 'p', 'p')
+    write_edges(edge_out, ppi_edge_set, ('p', 'p'))
 
     # Loop through every pair of node types.
     for i in range(len(f_tuples)):
@@ -184,20 +180,18 @@ def main():
             # Get the co-occurrence edge set.
             edge_set = get_coocc_edge_set(patient_dct_a, patient_dct_b)
 
-            # # symptom-herb edges should add the medical textbook's edges.
-            if 'symp' in fname_a and 'herb' in fname_b:
+            if node_type_a == 'm' and node_type_b == 'h':
                 edge_set = edge_set.union(file_operations.get_dictionary_symptom_herb_set())
 
             # Write the edges out to file.
-            write_files(node_out, edge_out, edge_set, node_type_a, node_type_b)
+            write_edges(edge_out, edge_set, (node_type_a, node_type_b))
             
     edge_out.close()
-    node_out.close()
+
+    write_nodes()
 
     # Run prosnet. Outputs the low-dimensional vectors into files.
-    run_prosnet(args)
+    run_prosnet()
 
 if __name__ == '__main__':
-    start_time = time.time()
     main()
-    print("\n--- %s seconds ---" % (time.time() - start_time))
